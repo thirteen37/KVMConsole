@@ -1,0 +1,65 @@
+name: NanoKVM
+options:
+  bundleIdPrefix: io.lyx
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_HARDENED_RUNTIME: YES
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+targets:
+  NanoKVM:
+    type: application
+    platform: macOS
+    sources:
+      - path: NanoKVM
+        excludes:
+          - "Resources/Info.plist"
+    resources: []
+    info:
+      path: NanoKVM/Resources/Info.plist
+      properties:
+        CFBundleName: NanoKVM
+        CFBundleDisplayName: NanoKVM
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        LSMinimumSystemVersion: "14.0"
+        NSHumanReadableCopyright: "© 2026 Yu-Xi Lim"
+    entitlements:
+      path: NanoKVM/Resources/NanoKVM.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.network.server: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.NanoKVM
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+  NanoKVMTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - NanoKVMTests
+    dependencies:
+      - target: NanoKVM
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.NanoKVMTests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  NanoKVM:
+    build:
+      targets:
+        NanoKVM: all
+        NanoKVMTests: [test]
+    test:
+      targets:
+        - NanoKVMTests
