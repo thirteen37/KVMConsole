@@ -1,4 +1,5 @@
 import AppKit
+import NanoKVMCore
 
 enum HIDKeymap {
     static func usage(for keyCode: UInt16) -> UInt8? {
@@ -15,14 +16,14 @@ enum HIDKeymap {
     }
 
     private static let modifierByMacKeyCode: [UInt16: (bit: UInt8, flag: NSEvent.ModifierFlags)] = [
-        59: (0x01, .control),   // left control
-        56: (0x02, .shift),     // left shift
-        58: (0x04, .option),    // left option
-        55: (0x08, .command),   // left command
-        62: (0x10, .control),   // right control
-        60: (0x20, .shift),     // right shift
-        61: (0x40, .option),    // right option
-        54: (0x80, .command)    // right command
+        59: (HIDModifierBit.leftControl.rawValue, .control),   // left control
+        56: (HIDModifierBit.leftShift.rawValue, .shift),        // left shift
+        58: (HIDModifierBit.leftAlt.rawValue, .option),         // left option
+        55: (HIDModifierBit.leftGUI.rawValue, .command),        // left command
+        62: (HIDModifierBit.rightControl.rawValue, .control),   // right control
+        60: (HIDModifierBit.rightShift.rawValue, .shift),       // right shift
+        61: (HIDModifierBit.rightAlt.rawValue, .option),        // right option
+        54: (HIDModifierBit.rightGUI.rawValue, .command)        // right command
     ]
 
     private static let usageByMacKeyCode: [UInt16: UInt8] = [

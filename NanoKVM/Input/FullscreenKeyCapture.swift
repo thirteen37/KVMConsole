@@ -1,23 +1,6 @@
 import AppKit
 import Foundation
-
-struct TripleEscapeDetector: Equatable {
-    static let triggerCount = 3
-    static let window: TimeInterval = 1.5
-
-    private var timestamps: [Date] = []
-
-    mutating func register(at timestamp: Date) -> Bool {
-        timestamps.append(timestamp)
-        let cutoff = timestamp.addingTimeInterval(-Self.window)
-        timestamps.removeAll { $0 < cutoff }
-        return timestamps.count >= Self.triggerCount
-    }
-
-    mutating func reset() {
-        timestamps.removeAll()
-    }
-}
+import NanoKVMCore
 
 @MainActor
 final class FullscreenKeyCaptureCoordinator {
