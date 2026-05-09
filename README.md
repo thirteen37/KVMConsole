@@ -70,6 +70,6 @@ Scripts/         Signed/notarized build pipeline
 
 See [`DeveloperRelease.md`](DeveloperRelease.md) for the Developer ID signing and notarization workflow used by the GitHub Actions release pipeline.
 
-## Copyright
+## License
 
-© 2026 Yu-Xi Lim. No license file is included in this repository.
+NanoKVM for macOS is released under the [MIT License](LICENSE).
