@@ -5,19 +5,19 @@ import XCTest
 final class SavedDevicesStoreTests: XCTestCase {
     private var tempDirectory: URL!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("SavedDevicesStoreTests-\(UUID().uuidString)", isDirectory: true)
         try? FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         if let tempDirectory {
             try? FileManager.default.removeItem(at: tempDirectory)
         }
         tempDirectory = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func test_addPersistsAcrossInstances() {
