@@ -1,0 +1,53 @@
+name: Build Developer ID App
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Signed Build
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Import Developer ID certificate
+        env:
+          P12_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          KEYCHAIN="$RUNNER_TEMP/nanokvm-signing.keychain-db"
+          CERTIFICATE="$RUNNER_TEMP/developer-id-application.p12"
+
+          echo "$P12_BASE64" | base64 --decode > "$CERTIFICATE"
+
+          security create-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          security import "$CERTIFICATE" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN"
+          security find-identity -v -p codesigning "$KEYCHAIN"
+
+      - name: Build signed app
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          FINAL_ZIP_PATH: build/developer-id/NanoKVM-DeveloperID-signed.zip
+          NOTARIZE: "0"
+        run: Scripts/build-developer-id.sh
+
+      - name: Upload signed build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: NanoKVM-DeveloperID-signed
+          path: build/developer-id/NanoKVM-DeveloperID-signed.zip
+          if-no-files-found: error

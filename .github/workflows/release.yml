@@ -1,0 +1,102 @@
+name: Release Notarized App
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and upload to
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  notarize:
+    name: Notarize And Upload Release Asset
+    runs-on: macos-latest
+
+    steps:
+      - name: Resolve release tag
+        id: release
+        env:
+          RELEASE_EVENT_TAG: ${{ github.event.release.tag_name }}
+          DISPATCH_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          TAG="${RELEASE_EVENT_TAG:-$DISPATCH_TAG}"
+          if [[ -z "$TAG" ]]; then
+            echo "Release tag is required." >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Import Developer ID certificate
+        id: signing
+        env:
+          P12_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          KEYCHAIN="$RUNNER_TEMP/nanokvm-signing.keychain-db"
+          CERTIFICATE="$RUNNER_TEMP/developer-id-application.p12"
+
+          echo "$P12_BASE64" | base64 --decode > "$CERTIFICATE"
+
+          security create-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          security import "$CERTIFICATE" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN"
+          security find-identity -v -p codesigning "$KEYCHAIN"
+          echo "keychain=$KEYCHAIN" >> "$GITHUB_OUTPUT"
+
+      - name: Store notarization credentials
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_APP_PASSWORD: ${{ secrets.NOTARY_APP_PASSWORD }}
+          NOTARY_PROFILE: NanoKVM-DeveloperID
+        run: |
+          xcrun notarytool store-credentials "$NOTARY_PROFILE" \
+            --apple-id "$NOTARY_APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$NOTARY_APP_PASSWORD" \
+            --keychain "${{ steps.signing.outputs.keychain }}"
+
+      - name: Build, notarize, and staple
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          FINAL_ZIP_PATH: build/developer-id/NanoKVM-${{ steps.release.outputs.tag }}-DeveloperID-notarized.zip
+          NOTARY_KEYCHAIN: ${{ steps.signing.outputs.keychain }}
+          NOTARY_PROFILE: NanoKVM-DeveloperID
+          NOTARIZE: "1"
+        run: Scripts/build-developer-id.sh
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: NanoKVM-${{ steps.release.outputs.tag }}-DeveloperID-notarized
+          path: build/developer-id/NanoKVM-${{ steps.release.outputs.tag }}-DeveloperID-notarized.zip
+          if-no-files-found: error
+
+      - name: Upload asset to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            build/developer-id/NanoKVM-"$RELEASE_TAG"-DeveloperID-notarized.zip \
+            --clobber
