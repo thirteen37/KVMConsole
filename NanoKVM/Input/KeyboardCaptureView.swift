@@ -13,7 +13,7 @@ struct KeyboardCaptureView: NSViewRepresentable {
         let view = CaptureNSView()
         view.onKeyboardReport = onKeyboardReport
         view.onMouseReport = onMouseReport
-        view.isKeyboardEnabled = isKeyboardEnabled
+        view.setKeyboardEnabled(isKeyboardEnabled)
         view.setMouseEnabled(isMouseEnabled)
         view.isScrollInverted = isScrollInverted
         view.videoSize = videoSize
@@ -23,20 +23,15 @@ struct KeyboardCaptureView: NSViewRepresentable {
     func updateNSView(_ nsView: CaptureNSView, context: Context) {
         nsView.onKeyboardReport = onKeyboardReport
         nsView.onMouseReport = onMouseReport
-        nsView.isKeyboardEnabled = isKeyboardEnabled
+        nsView.setKeyboardEnabled(isKeyboardEnabled)
         nsView.setMouseEnabled(isMouseEnabled)
         nsView.isScrollInverted = isScrollInverted
         nsView.videoSize = videoSize
-        if isKeyboardEnabled || isMouseEnabled {
-            DispatchQueue.main.async {
-                nsView.window?.makeFirstResponder(nsView)
-            }
-        }
     }
 }
 
 final class CaptureNSView: NSView {
-    var isKeyboardEnabled = false
+    private(set) var isKeyboardEnabled = false
     private(set) var isMouseEnabled = false
     var isScrollInverted = true
     var videoSize: CGSize?
@@ -75,9 +70,28 @@ final class CaptureNSView: NSView {
         ))
     }
 
+    func setKeyboardEnabled(_ enabled: Bool) {
+        let wasEnabled = isKeyboardEnabled
+        isKeyboardEnabled = enabled
+        if enabled, !wasEnabled {
+            requestFirstResponder()
+        }
+    }
+
     func setMouseEnabled(_ enabled: Bool) {
+        let wasEnabled = isMouseEnabled
         isMouseEnabled = enabled
         updateCursorVisibility()
+        if enabled, !wasEnabled {
+            requestFirstResponder()
+        }
+    }
+
+    private func requestFirstResponder() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let window = self.window else { return }
+            window.makeFirstResponder(self)
+        }
     }
 
     override func mouseEntered(with event: NSEvent) {

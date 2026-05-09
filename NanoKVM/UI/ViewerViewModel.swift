@@ -34,8 +34,11 @@ final class ViewerViewModel: ObservableObject {
             self?.errorMessage = state.errorMessage
         }
         session.onSampleBuffer = { [weak self] sampleBuffer, videoSize in
-            self?.videoSize = videoSize
-            self?.latestSampleBuffer = sampleBuffer
+            guard let self else { return }
+            if self.videoSize != videoSize {
+                self.videoSize = videoSize
+            }
+            self.latestSampleBuffer = sampleBuffer
         }
         session.onFlush = { [weak self] in
             self?.flushVideo()

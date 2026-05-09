@@ -143,12 +143,16 @@ final class NanoKVMClientTests: XCTestCase {
 
 final class DeviceTests: XCTestCase {
     func test_baseURL_omitsDefaultPorts() {
-        XCTAssertEqual(Device(name: "a", host: "h").baseURL.absoluteString, "http://h")
-        XCTAssertEqual(Device(name: "a", host: "h", scheme: .https).baseURL.absoluteString, "https://h")
+        XCTAssertEqual(Device(name: "a", host: "h").baseURL?.absoluteString, "http://h")
+        XCTAssertEqual(Device(name: "a", host: "h", scheme: .https).baseURL?.absoluteString, "https://h")
     }
 
     func test_baseURL_includesNonDefaultPort() {
-        XCTAssertEqual(Device(name: "a", host: "h", port: 8080).baseURL.absoluteString, "http://h:8080")
+        XCTAssertEqual(Device(name: "a", host: "h", port: 8080).baseURL?.absoluteString, "http://h:8080")
+    }
+
+    func test_baseURL_isNilForInvalidHost() {
+        XCTAssertNil(Device(name: "a", host: "host with spaces").baseURL)
     }
 
     func test_webSocketScheme_followsHTTPScheme() {

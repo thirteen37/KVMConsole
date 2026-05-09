@@ -26,7 +26,7 @@ struct Device: Identifiable, Hashable, Codable, Sendable {
         self.username = username
     }
 
-    var baseURL: URL {
+    var baseURL: URL? {
         var components = URLComponents()
         components.scheme = scheme.rawValue
         components.host = host
@@ -34,7 +34,7 @@ struct Device: Identifiable, Hashable, Codable, Sendable {
         if !isDefaultPort {
             components.port = port
         }
-        return components.url!
+        return components.url
     }
 
     var webSocketScheme: String { scheme == .https ? "wss" : "ws" }

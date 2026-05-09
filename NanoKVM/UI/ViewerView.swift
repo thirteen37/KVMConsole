@@ -36,8 +36,6 @@ struct ViewerView: View {
     @State private var coordinator: FullscreenKeyCaptureCoordinator?
     @State private var toolbarHideTask: Task<Void, Never>?
 
-    private static let toolbarRevealZone: CGFloat = 8
-    private static let toolbarHideZone: CGFloat = 60
     private static let toolbarHideDelayNs: UInt64 = 2_000_000_000
 
     init(device: Device) {
@@ -63,19 +61,6 @@ struct ViewerView: View {
         })
         .toolbar { toolbarContent }
         .animation(.easeInOut(duration: 0.25), value: model.showFullscreenBanner)
-        .onContinuousHover { phase in
-            guard model.isFullscreen else { return }
-            switch phase {
-            case .active(let location):
-                if location.y < Self.toolbarRevealZone {
-                    revealToolbar()
-                } else if location.y > Self.toolbarHideZone {
-                    scheduleToolbarHide()
-                }
-            case .ended:
-                scheduleToolbarHide()
-            }
-        }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification)) { note in
             guard let w = note.object as? NSWindow, w === window else { return }
             handleEnterFullScreen()
@@ -205,7 +190,9 @@ struct ViewerView: View {
         let coord = FullscreenKeyCaptureCoordinator(
             isCapturing: { [model] in model.isKeyboardCaptureEnabled },
             onKeyboardReport: { [model] report in model.sendKeyboardReport(report) },
-            onTripleEscape: { [model] in model.handleTripleEscape() }
+            onTripleEscape: { [model] in model.handleTripleEscape() },
+            onTopEdgeHover: { revealToolbar() },
+            onTopEdgeLeft: { scheduleToolbarHide() }
         )
         coord.start(window: window)
         coordinator = coord

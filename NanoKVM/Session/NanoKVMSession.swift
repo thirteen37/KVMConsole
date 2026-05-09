@@ -81,7 +81,7 @@ final class NanoKVMSession {
             do {
                 try await client.login(password: configuration.password)
                 try Task.checkCancellation()
-                try self?.passwordStore.savePassword(configuration.password, for: configuration.passwordAccount)
+                try? self?.passwordStore.savePassword(configuration.password, for: configuration.passwordAccount)
                 try await client.selectH264()
                 try Task.checkCancellation()
 
@@ -91,6 +91,12 @@ final class NanoKVMSession {
 
                 let controlSocket = ControlSocket(device: configuration.device, token: token)
                 try await controlSocket.connect()
+                await controlSocket.setOnDisconnect { [weak self] error in
+                    Task { @MainActor in
+                        guard let self, self.generation == myGeneration else { return }
+                        self.finishWithError(error)
+                    }
+                }
                 localControlSocket = controlSocket
 
                 let videoSocket = H264StreamSocket(device: configuration.device, token: token)

@@ -89,7 +89,10 @@ actor NanoKVMClient {
     }
 
     private func send<T: Decodable>(method: String, path: String, body: Data?, authenticated: Bool) async throws -> T {
-        guard let url = URL(string: path, relativeTo: device.baseURL) else { throw NanoKVMError.invalidURL }
+        guard
+            let baseURL = device.baseURL,
+            let url = URL(string: path, relativeTo: baseURL)
+        else { throw NanoKVMError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

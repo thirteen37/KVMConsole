@@ -17,11 +17,16 @@ actor ControlSocket {
     private var task: URLSessionWebSocketTask?
     private var heartbeatTask: Task<Void, Never>?
     private var receiveTask: Task<Void, Never>?
+    private var onDisconnect: (@Sendable (Error) -> Void)?
 
     init(device: Device, token: String, session: URLSession = .shared) {
         self.device = device
         self.token = token
         self.session = session
+    }
+
+    func setOnDisconnect(_ callback: @escaping @Sendable (Error) -> Void) {
+        onDisconnect = callback
     }
 
     func connect() throws {
@@ -79,7 +84,11 @@ actor ControlSocket {
             do {
                 _ = try await task.receive()
             } catch {
+                let callback = onDisconnect
                 close()
+                if !Task.isCancelled {
+                    callback?(error)
+                }
                 return
             }
         }
