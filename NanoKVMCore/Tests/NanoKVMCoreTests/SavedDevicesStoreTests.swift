@@ -3,37 +3,23 @@ import XCTest
 
 @MainActor
 final class SavedDevicesStoreTests: XCTestCase {
-    private var tempDirectory: URL!
-
-    override func setUp() async throws {
-        try await super.setUp()
-        tempDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("SavedDevicesStoreTests-\(UUID().uuidString)", isDirectory: true)
-        try? FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
-    }
-
-    override func tearDown() async throws {
-        if let tempDirectory {
-            try? FileManager.default.removeItem(at: tempDirectory)
-        }
-        tempDirectory = nil
-        try await super.tearDown()
-    }
-
     func test_addPersistsAcrossInstances() {
-        let url = storeURL()
+        let fixture = makeFixture()
+        defer { fixture.cleanup() }
         let passwordStore = InMemoryPasswordStore()
         let device = makeDevice(name: "Lab")
 
-        let first = SavedDevicesStore(storeURL: url, passwordStore: passwordStore)
+        let first = SavedDevicesStore(storeURL: fixture.storeURL, passwordStore: passwordStore)
         first.add(device)
 
-        let second = SavedDevicesStore(storeURL: url, passwordStore: passwordStore)
+        let second = SavedDevicesStore(storeURL: fixture.storeURL, passwordStore: passwordStore)
         XCTAssertEqual(second.devices, [device])
     }
 
     func test_updateMutatesInPlace() {
-        let store = SavedDevicesStore(storeURL: storeURL(), passwordStore: InMemoryPasswordStore())
+        let fixture = makeFixture()
+        defer { fixture.cleanup() }
+        let store = SavedDevicesStore(storeURL: fixture.storeURL, passwordStore: InMemoryPasswordStore())
         var device = makeDevice(name: "Lab")
         store.add(device)
 
@@ -45,8 +31,10 @@ final class SavedDevicesStoreTests: XCTestCase {
     }
 
     func test_deleteRemovesDeviceAndKeychainPassword() throws {
+        let fixture = makeFixture()
+        defer { fixture.cleanup() }
         let passwordStore = InMemoryPasswordStore()
-        let store = SavedDevicesStore(storeURL: storeURL(), passwordStore: passwordStore)
+        let store = SavedDevicesStore(storeURL: fixture.storeURL, passwordStore: passwordStore)
         let device = makeDevice(name: "Lab")
         store.add(device)
         let account = store.keychainAccount(for: device)
@@ -59,8 +47,10 @@ final class SavedDevicesStoreTests: XCTestCase {
     }
 
     func test_updateMigratesPasswordWhenAccountChanges() throws {
+        let fixture = makeFixture()
+        defer { fixture.cleanup() }
         let passwordStore = InMemoryPasswordStore()
-        let store = SavedDevicesStore(storeURL: storeURL(), passwordStore: passwordStore)
+        let store = SavedDevicesStore(storeURL: fixture.storeURL, passwordStore: passwordStore)
         var device = makeDevice(name: "Lab", username: "admin")
         store.add(device)
         let oldAccount = store.keychainAccount(for: device)
@@ -75,8 +65,11 @@ final class SavedDevicesStoreTests: XCTestCase {
         XCTAssertNil(try passwordStore.password(for: oldAccount))
     }
 
-    private func storeURL() -> URL {
-        tempDirectory.appendingPathComponent("devices.json")
+    private func makeFixture() -> TemporaryStoreFixture {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SavedDevicesStoreTests-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return TemporaryStoreFixture(directory: directory)
     }
 
     private func makeDevice(name: String, username: String = "admin") -> Device {
@@ -88,6 +81,18 @@ final class SavedDevicesStoreTests: XCTestCase {
             scheme: .http,
             username: username
         )
+    }
+}
+
+private struct TemporaryStoreFixture {
+    let directory: URL
+
+    var storeURL: URL {
+        directory.appendingPathComponent("devices.json")
+    }
+
+    func cleanup() {
+        try? FileManager.default.removeItem(at: directory)
     }
 }
 
