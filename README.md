@@ -1,24 +1,30 @@
-# NanoKVM for macOS
+# NanoKVM for macOS and iPadOS
 
-A native SwiftUI client for [NanoKVM](https://github.com/sipeed/NanoKVM) hardware KVM-over-IP devices. Manage saved connections, view the remote system's H.264 video stream, and send keyboard and mouse input — all from a Mac app, without a browser.
+A native SwiftUI client for [NanoKVM](https://github.com/sipeed/NanoKVM) hardware KVM-over-IP devices. Manage saved connections, view the remote system's H.264 video stream, and send keyboard and mouse input from a Mac or iPad app, without a browser.
+
+I started this after using NanoKVM to drive my spare Mac in the closet for AI-agent workflows. The goal is a KVM client that feels closer to sitting at the machine: shortcuts arrive at the remote host, pointer and scroll input behave predictably, and the video path stays low-latency.
 
 ## Features
 
 - Manage multiple NanoKVM devices, each with its own URL, port, and credentials
-- Per-device passwords stored securely in the macOS Keychain
+- Per-device passwords stored securely in the Apple Keychain
 - Hardware-accelerated H.264 decoding via VideoToolbox; rendered with Metal
-- Full keyboard and absolute-positioning mouse input over the device's HID WebSocket
-- Fullscreen viewer with triple-Escape to exit
+- Lower-latency native video and input path than driving the NanoKVM through a browser
+- Full keyboard capture, including shortcuts such as Cmd-W that browsers normally intercept
+- More reliable scrolling and absolute-positioning mouse input over the device's HID WebSocket
+- iPadOS support with better hardware keyboard, modifier-key, pointer, and scrolling behavior
+- macOS fullscreen viewer with triple-Escape to exit
 - Connection heartbeat with automatic state surfacing in the UI
 
 ## Requirements
 
-- macOS 14 (Sonoma) or later
+- macOS 15 (Sequoia) or later for the Mac app
+- iPadOS 26 or later for the iPad app
 - A NanoKVM device reachable over the network
 
 ## Install
 
-Download the notarized `NanoKVM-<tag>-DeveloperID-notarized.zip` from the latest [GitHub Release](../../releases), unzip, and drag `NanoKVM.app` into `/Applications`.
+For macOS, download the notarized `NanoKVM-<tag>-DeveloperID-notarized.zip` from the latest [GitHub Release](../../releases), unzip, and drag `NanoKVM.app` into `/Applications`.
 
 ## Build from source
 
@@ -41,29 +47,42 @@ xcodebuild test \
   CODE_SIGN_IDENTITY= DEVELOPMENT_TEAM=
 ```
 
+To run the iPadOS unit tests in Simulator:
+
+```sh
+xcodebuild test \
+  -project NanoKVM.xcodeproj \
+  -scheme NanoKVMiPad \
+  -destination 'platform=iOS Simulator,name=iPad Pro 11-inch (M5)'
+```
+
 To produce a locally signed build (no notarization):
 
 ```sh
 NOTARIZE=0 Scripts/build-developer-id.sh
 ```
 
-The app uses only Apple frameworks (SwiftUI, AppKit, AVFoundation, VideoToolbox, CoreMedia, CoreVideo, Security) — no third-party Swift packages.
+The app uses only Apple frameworks (SwiftUI, AppKit/UIKit, AVFoundation, VideoToolbox, CoreMedia, CoreVideo, Security) — no third-party Swift packages.
 
 ## Project layout
 
 ```
+NanoKVMCore/     Shared Swift package for networking, sessions, video, input, UI, and persistence
 NanoKVM/
-  App/           SwiftUI entry point
-  Models/        Device + saved-devices store
-  UI/            Connection manager and viewer windows
-  Networking/    REST client, control + H.264 WebSockets
-  Session/       Orchestrates client, sockets, and decoder
-  Video/         H.264 Annex B parser, VideoToolbox decoder, Metal render view
-  Input/         HID keyboard/mouse reports and key capture
-  Persistence/   Keychain-backed password store
-  Resources/     Info.plist, entitlements
-NanoKVMTests/    XCTest unit tests
-Scripts/         Signed/notarized build pipeline
+  App/           macOS SwiftUI entry point
+  UI/            macOS viewer windows
+  Input/         macOS keyboard capture
+  Video/         macOS Metal render view
+  Resources/     macOS Info.plist, entitlements
+NanoKVMiPad/
+  App/           iPadOS SwiftUI entry point
+  UI/            iPad viewer and modifier-key controls
+  Input/         iPad keyboard and pointer capture
+  Video/         iPad Metal render view
+  Resources/     iPadOS Info.plist, entitlements
+NanoKVMTests/    macOS XCTest unit tests
+NanoKVMiPadTests/  iPadOS XCTest unit tests
+Scripts/         Signed/notarized macOS build pipeline
 ```
 
 ## Releasing
@@ -72,4 +91,4 @@ See [`DeveloperRelease.md`](DeveloperRelease.md) for the Developer ID signing an
 
 ## License
 
-NanoKVM for macOS is released under the [MIT License](LICENSE).
+NanoKVM for macOS and iPadOS is released under the [MIT License](LICENSE).
