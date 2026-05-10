@@ -1,4 +1,5 @@
 import AppKit
+import NanoKVMCore
 import SwiftUI
 
 struct ViewerHostView: View {

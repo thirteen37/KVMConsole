@@ -2,13 +2,17 @@ name: NanoKVM
 options:
   bundleIdPrefix: io.lyx
   deploymentTarget:
-    macOS: "14.0"
+    macOS: "15.0"
+    iOS: "26.0"
   createIntermediateGroups: true
   developmentLanguage: en
+packages:
+  NanoKVMCore:
+    path: NanoKVMCore
 settings:
   base:
-    SWIFT_VERSION: "5.10"
-    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
     SWIFT_STRICT_CONCURRENCY: complete
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Automatic
@@ -24,6 +28,8 @@ targets:
           - "Resources/Info.plist"
       - path: NanoKVM/Assets.xcassets
         buildPhase: resources
+    dependencies:
+      - package: NanoKVMCore
     info:
       path: NanoKVM/Resources/Info.plist
       properties:
@@ -31,7 +37,7 @@ targets:
         CFBundleDisplayName: NanoKVM
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
-        LSMinimumSystemVersion: "14.0"
+        LSMinimumSystemVersion: "15.0"
         NSHumanReadableCopyright: "© 2026 Yu-Xi Lim"
     entitlements:
       path: NanoKVM/Resources/NanoKVM.entitlements
@@ -52,9 +58,67 @@ targets:
       - NanoKVMTests
     dependencies:
       - target: NanoKVM
+      - package: NanoKVMCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.lyx.NanoKVMTests
+        GENERATE_INFOPLIST_FILE: YES
+  NanoKVMiPad:
+    type: application
+    platform: iOS
+    sources:
+      - path: NanoKVMiPad
+        excludes:
+          - "Assets.xcassets"
+          - "Resources/Info.plist"
+      - path: NanoKVMiPad/Assets.xcassets
+        buildPhase: resources
+    dependencies:
+      - package: NanoKVMCore
+    info:
+      path: NanoKVMiPad/Resources/Info.plist
+      properties:
+        CFBundleName: NanoKVM
+        CFBundleDisplayName: NanoKVM
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        GCSupportsControllerUserInteraction: true
+        LSRequiresIPhoneOS: true
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: "NanoKVM connects to your KVM device over the local network."
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    entitlements:
+      path: NanoKVMiPad/Resources/NanoKVM.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.NanoKVM
+        TARGETED_DEVICE_FAMILY: "2"
+        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+  NanoKVMiPadTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - NanoKVMiPadTests
+    dependencies:
+      - target: NanoKVMiPad
+      - package: NanoKVMCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.NanoKVMiPadTests
         GENERATE_INFOPLIST_FILE: YES
 schemes:
   NanoKVM:
@@ -65,3 +129,11 @@ schemes:
     test:
       targets:
         - NanoKVMTests
+  NanoKVMiPad:
+    build:
+      targets:
+        NanoKVMiPad: all
+        NanoKVMiPadTests: [test]
+    test:
+      targets:
+        - NanoKVMiPadTests

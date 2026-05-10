@@ -1,4 +1,5 @@
 import XCTest
+@testable import NanoKVMCore
 @testable import NanoKVM
 
 final class KeychainPasswordStoreTests: XCTestCase {

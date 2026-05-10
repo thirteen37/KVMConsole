@@ -1,9 +1,8 @@
-@preconcurrency import AVFoundation
 @preconcurrency import CoreMedia
 import NanoKVMCore
 import SwiftUI
 
-struct VideoRenderView: NSViewRepresentable {
+struct VideoRenderView: UIViewRepresentable {
     let sampleBuffer: CMSampleBuffer?
     let flushToken: Int
 
@@ -11,15 +10,15 @@ struct VideoRenderView: NSViewRepresentable {
         Coordinator()
     }
 
-    func makeNSView(context: Context) -> SampleBufferDisplayView {
-        SampleBufferDisplayView()
+    func makeUIView(context: Context) -> SampleBufferDisplayUIView {
+        SampleBufferDisplayUIView()
     }
 
-    func updateNSView(_ nsView: SampleBufferDisplayView, context: Context) {
+    func updateUIView(_ uiView: SampleBufferDisplayUIView, context: Context) {
         context.coordinator.render.update(
             sampleBuffer: sampleBuffer,
             flushToken: flushToken,
-            display: nsView.display
+            display: uiView.display
         )
     }
 
@@ -28,17 +27,21 @@ struct VideoRenderView: NSViewRepresentable {
     }
 }
 
-final class SampleBufferDisplayView: NSView {
+final class SampleBufferDisplayUIView: UIView {
     let display = SampleBufferDisplay()
 
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        wantsLayer = true
-        layer = display.layer
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .black
+        layer.addSublayer(display.layer)
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        display.layer.frame = bounds
+    }
 }

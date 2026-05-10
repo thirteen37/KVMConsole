@@ -1,3 +1,4 @@
+import NanoKVMCore
 import SwiftUI
 
 @main
