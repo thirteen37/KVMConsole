@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "NanoKVMCore",
     platforms: [
-        .macOS("26.0"),
+        .macOS("15.0"),
         .iOS("26.0")
     ],
     products: [

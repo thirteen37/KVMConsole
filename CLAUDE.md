@@ -38,7 +38,7 @@ Release pipeline (Developer ID signing + notarization, macOS only) is documented
 ## Toolchain
 
 - Swift 6.0, `SWIFT_STRICT_CONCURRENCY: complete`
-- macOS 26 / iPadOS 26 deployment target
+- macOS 15 / iPadOS 26 deployment target
 - iPadOS app: `TARGETED_DEVICE_FAMILY=2` (iPad only — no iPhone, no Catalyst)
 - macOS app: hardened runtime, app sandbox, `network.client` entitlement
 - No external Swift packages — only Apple frameworks (SwiftUI, AppKit/UIKit, AVFoundation, VideoToolbox, CoreMedia, CoreVideo, Security)
