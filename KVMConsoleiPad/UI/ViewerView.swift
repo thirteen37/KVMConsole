@@ -164,7 +164,7 @@ struct ViewerView: View {
                     .frame(minWidth: 92, alignment: .leading)
             }
 
-            if model.powerControl != nil {
+            if model.supportsPowerControl {
                 Menu {
                     Button("On") { model.powerOn() }
                     Button("Off") { model.powerOff() }
@@ -175,8 +175,8 @@ struct ViewerView: View {
                 } label: {
                     Label("Power", systemImage: "power")
                 }
-                .labelStyle(.iconOnly)
-                .help("Power")
+                .disabled(model.powerControl == nil)
+                .help("ATX power")
             }
 
             Button {

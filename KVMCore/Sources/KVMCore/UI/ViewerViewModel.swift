@@ -73,6 +73,7 @@ public final class ViewerViewModel: ObservableObject {
 
     public var isStreaming: Bool { session.isStreaming }
     public var powerControl: KVMPowerControl? { session.powerControl }
+    public var supportsPowerControl: Bool { device.kvmType == .comet }
 
     public func reconnect() {
         if let savedPassword = savedPassword(), !savedPassword.isEmpty {
