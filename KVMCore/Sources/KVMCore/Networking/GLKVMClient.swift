@@ -4,50 +4,55 @@ public enum GLKVMError: Error, LocalizedError, Equatable {
     case invalidURL
     case unexpectedStatus(Int)
     case missingAuthToken
-    case decodingFailed(String)
 
     public var errorDescription: String? {
         switch self {
         case .invalidURL: return "Invalid GLKVM URL."
         case .unexpectedStatus(let code): return "GLKVM returned HTTP \(code)."
         case .missingAuthToken: return "GLKVM did not return an auth cookie."
-        case .decodingFailed(let message): return "GLKVM decoding failed: \(message)"
         }
     }
 }
 
 public actor GLKVMClient: KVMPowerControl {
-    public enum ATXPowerAction: String, Sendable {
+    private enum ATXPowerAction: String, Sendable {
         case on
         case off
         case forceOff = "off_hard"
         case reset = "reset_hard"
     }
 
-    public enum ATXClickButton: String, Sendable {
-        case power
+    private enum ATXClickButton: String, Sendable {
         case powerLong = "power_long"
-        case reset
     }
 
     public let device: Device
     private let session: URLSessionProtocol
+    private let ownedSession: URLSession?
     public private(set) var authToken: String?
 
     public init(device: Device, session: URLSessionProtocol? = nil) {
         self.device = device
         if let session {
             self.session = session
+            self.ownedSession = nil
         } else if device.allowsInsecureTLS {
-            let delegate = InsecureTLSDelegate(allowsInsecureTLS: true)
-            self.session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            let delegate = InsecureTLSDelegate()
+            let owned = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            self.session = owned
+            self.ownedSession = owned
         } else {
             self.session = URLSession.shared
+            self.ownedSession = nil
         }
     }
 
     public func setAuthToken(_ token: String?) {
         authToken = token
+    }
+
+    public func close() {
+        ownedSession?.invalidateAndCancel()
     }
 
     public func login(password: String) async throws {
@@ -68,17 +73,13 @@ public actor GLKVMClient: KVMPowerControl {
         authToken = token
     }
 
-    public func info() async throws -> GLKVMInfo {
-        try await getJSON(path: "/api/info")
-    }
-
-    public func atxPower(_ action: ATXPowerAction) async throws {
+    private func atxPower(_ action: ATXPowerAction) async throws {
         try await postNoBody(path: "/api/atx/power", queryItems: [
             URLQueryItem(name: "action", value: action.rawValue),
         ])
     }
 
-    public func atxClick(_ button: ATXClickButton) async throws {
+    private func atxClick(_ button: ATXClickButton) async throws {
         try await postNoBody(path: "/api/atx/click", queryItems: [
             URLQueryItem(name: "button", value: button.rawValue),
         ])
@@ -95,23 +96,6 @@ public actor GLKVMClient: KVMPowerControl {
     public func forceOff() async throws { try await atxPower(.forceOff) }
     public func reset() async throws { try await atxPower(.reset) }
     public func longPressPower() async throws { try await atxClick(.powerLong) }
-
-    private func getJSON<T: Decodable>(path: String) async throws -> T {
-        guard let url = url(path: path) else { throw GLKVMError.invalidURL }
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        addAuth(to: &request)
-
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw GLKVMError.unexpectedStatus(-1) }
-        guard (200..<300).contains(http.statusCode) else { throw GLKVMError.unexpectedStatus(http.statusCode) }
-        do {
-            return try JSONDecoder().decode(T.self, from: data)
-        } catch {
-            throw GLKVMError.decodingFailed(String(describing: error))
-        }
-    }
 
     private func postNoBody(path: String, queryItems: [URLQueryItem]) async throws {
         guard let url = url(path: path, queryItems: queryItems) else { throw GLKVMError.invalidURL }
@@ -169,10 +153,4 @@ public actor GLKVMClient: KVMPowerControl {
             }
             .first
     }
-}
-
-public struct GLKVMInfo: Decodable, Sendable, Equatable {
-    public let hostname: String?
-    public let kvmd: [String: String]?
-    public let streamer: [String: String]?
 }

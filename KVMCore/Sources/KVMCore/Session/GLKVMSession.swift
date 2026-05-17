@@ -200,14 +200,16 @@ public final class GLKVMSession: KVMSession {
         self.controlSocket = nil
         let mouseMoveCoalescer = mouseMoveCoalescer
         self.mouseMoveCoalescer = nil
+        let client = client
+        self.client = nil
         Task {
             await mouseMoveCoalescer?.cancel()
             await controlSocket?.close()
+            await client?.close()
         }
 
         decoder?.invalidate()
         decoder = nil
-        client = nil
     }
 
     nonisolated private static func videoSize(from sampleBuffer: CMSampleBuffer) -> CGSize? {

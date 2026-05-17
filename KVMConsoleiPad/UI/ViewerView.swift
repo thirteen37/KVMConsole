@@ -123,7 +123,7 @@ struct ViewerView: View {
             } label: {
                 Label("Show Keyboard", systemImage: "keyboard.chevron.compact.down")
             }
-            Text(model.status)
+            Text(model.state.displayText)
                 .foregroundStyle(statusColor)
             if model.powerControl != nil {
                 Menu {
@@ -175,11 +175,11 @@ struct ViewerView: View {
     }
 
     private var statusColor: Color {
-        switch model.status {
-        case "Streaming": return .green
-        case "Error": return .red
-        case "Connecting...": return .orange
-        default: return .secondary
+        switch model.state {
+        case .streaming: return .green
+        case .error: return .red
+        case .connecting: return .orange
+        case .disconnected: return .secondary
         }
     }
 

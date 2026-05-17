@@ -48,6 +48,7 @@ public final class GLKVMH264MediaSocket: @unchecked Sendable {
     private let device: Device
     private let authToken: String
     private let session: URLSession
+    private let ownedSession: URLSession?
     private var task: URLSessionWebSocketTask?
     private var heartbeatTask: Task<Void, Never>?
     private var firstFrameLogged = false
@@ -57,11 +58,15 @@ public final class GLKVMH264MediaSocket: @unchecked Sendable {
         self.authToken = authToken
         if let session {
             self.session = session
+            self.ownedSession = nil
         } else if device.allowsInsecureTLS {
-            let delegate = InsecureTLSDelegate(allowsInsecureTLS: true)
-            self.session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            let delegate = InsecureTLSDelegate()
+            let owned = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            self.session = owned
+            self.ownedSession = owned
         } else {
             self.session = URLSession.shared
+            self.ownedSession = nil
         }
     }
 
@@ -121,6 +126,7 @@ public final class GLKVMH264MediaSocket: @unchecked Sendable {
         task?.cancel(with: .goingAway, reason: nil)
         task = nil
         firstFrameLogged = false
+        ownedSession?.invalidateAndCancel()
     }
 
     private func startHeartbeat(task: URLSessionWebSocketTask) {

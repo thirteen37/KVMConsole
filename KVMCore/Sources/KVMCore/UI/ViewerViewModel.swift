@@ -4,7 +4,7 @@ import Foundation
 @MainActor
 public final class ViewerViewModel: ObservableObject {
     @Published public var device: Device
-    @Published public var status: String
+    @Published public var state: KVMSessionState = .disconnected
     @Published public var errorMessage: String?
     @Published public var videoSize: CGSize?
     @Published public var isKeyboardCaptureEnabled = true
@@ -34,10 +34,8 @@ public final class ViewerViewModel: ObservableObject {
             passwordStore: passwordStore,
             renderCoordinator: renderCoordinator
         )
-        self.status = KVMSessionState.disconnected.displayText
-
         session.onStateChange = { [weak self] state in
-            self?.status = state.displayText
+            self?.state = state
             self?.errorMessage = state.errorMessage
         }
         session.onVideoSize = { [weak self] videoSize in

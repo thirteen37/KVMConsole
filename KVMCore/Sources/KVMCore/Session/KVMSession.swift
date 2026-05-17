@@ -51,5 +51,3 @@ public protocol KVMSession: AnyObject {
     func sendMouseReport(_ report: HIDMouseAbsoluteReport)
 }
 
-public typealias NanoKVMSessionConfiguration = KVMSessionConfiguration
-public typealias NanoKVMSessionState = KVMSessionState

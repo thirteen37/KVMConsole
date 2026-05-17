@@ -14,6 +14,7 @@ public actor GLKVMControlSocket {
     private let device: Device
     private let authToken: String
     private let session: URLSession
+    private let ownedSession: URLSession?
     private var task: URLSessionWebSocketTask?
     private var heartbeatTask: Task<Void, Never>?
     private var receiveTask: Task<Void, Never>?
@@ -26,11 +27,15 @@ public actor GLKVMControlSocket {
         self.authToken = authToken
         if let session {
             self.session = session
+            self.ownedSession = nil
         } else if device.allowsInsecureTLS {
-            let delegate = InsecureTLSDelegate(allowsInsecureTLS: true)
-            self.session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            let delegate = InsecureTLSDelegate()
+            let owned = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            self.session = owned
+            self.ownedSession = owned
         } else {
             self.session = URLSession.shared
+            self.ownedSession = nil
         }
     }
 
@@ -100,6 +105,7 @@ public actor GLKVMControlSocket {
         receiveTask = nil
         task?.cancel(with: .goingAway, reason: nil)
         task = nil
+        ownedSession?.invalidateAndCancel()
     }
 
     public nonisolated static func keyboardEvents(
@@ -156,12 +162,6 @@ public actor GLKVMControlSocket {
         let clamped = max(1, min(32_768, Int(value)))
         let normalized = Double(clamped - 1) / 32_767.0
         return Int((normalized * 65_535.0).rounded()) - 32_768
-    }
-
-    public nonisolated static func pikvmUnsignedCoordinate(from value: UInt16) -> Int {
-        let clamped = max(1, min(32_768, Int(value)))
-        let normalized = Double(clamped - 1) / 32_767.0
-        return Int((normalized * 65_535.0).rounded())
     }
 
     public nonisolated static func encode(_ event: GLKVMOutboundEvent) -> Data {

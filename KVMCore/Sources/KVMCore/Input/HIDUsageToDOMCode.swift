@@ -1,10 +1,5 @@
 import Foundation
 
-public enum ModifierSide: Sendable {
-    case left
-    case right
-}
-
 public enum HIDUsageToDOMCode {
     private static let table: [UInt8: String] = [
         0x04: "KeyA", 0x05: "KeyB", 0x06: "KeyC", 0x07: "KeyD", 0x08: "KeyE",
@@ -44,7 +39,7 @@ public enum HIDUsageToDOMCode {
         0xE7: "MetaRight",
     ]
 
-    public static func lookup(usage: UInt8, side: ModifierSide? = nil) -> String? {
+    public static func lookup(usage: UInt8) -> String? {
         if let modifier = modifierUsageTable[usage] {
             return modifier
         }

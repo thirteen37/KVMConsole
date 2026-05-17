@@ -127,7 +127,7 @@ struct ViewerView: View {
                 .padding(.trailing, 8)
         }
         ToolbarItem(placement: .primaryAction) {
-            Text(model.status)
+            Text(model.state.displayText)
                 .foregroundStyle(statusColor)
                 .padding(.horizontal, 4)
         }
@@ -191,11 +191,11 @@ struct ViewerView: View {
     }
 
     private var statusColor: Color {
-        switch model.status {
-        case "Streaming": return .green
-        case "Error": return .red
-        case "Connecting...": return .orange
-        default: return .secondary
+        switch model.state {
+        case .streaming: return .green
+        case .error: return .red
+        case .connecting: return .orange
+        case .disconnected: return .secondary
         }
     }
 
