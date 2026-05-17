@@ -53,7 +53,7 @@ Release pipeline (Developer ID signing + notarization, macOS only) is documented
 - `Video/` — `H264Decoder` (VideoToolbox), `H264AnnexBParser`, `SampleBufferDisplay` (shared `AVSampleBufferDisplayLayer` config)
 - `Input/` — `HIDKeyboardReport`, `HIDMouseReport`, `HIDModifierBit`, `MouseScrollAccumulator`, `MouseCoordinateMapper`, `TripleEscapeDetector`
 - `Persistence/` — `KeychainPasswordStore`
-- `UI/` — `ConnectionManagerView`, `DeviceEditorView`, `ViewerViewModel` (pure SwiftUI, used by both apps)
+- `UI/` — `ConnectionManagerView`, `DeviceEditorView`, `ViewerViewModel`, `ViewerZoomState` (pinch/pan state shared by both viewers), `MinimapView` (overlay shown while zoomed) — pure SwiftUI, used by both apps
 
 `NanoKVM/` — macOS app target.
 - `App/NanoKVMApp.swift` — two-window SwiftUI entry (Connections + Viewer `WindowGroup`)

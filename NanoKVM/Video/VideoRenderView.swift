@@ -4,6 +4,9 @@ import SwiftUI
 
 struct VideoRenderView: NSViewRepresentable {
     let renderCoordinator: SampleBufferRenderCoordinator
+    let scale: CGFloat
+    let center: CGPoint
+    let videoSize: CGSize?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(renderCoordinator: renderCoordinator)
@@ -12,11 +15,13 @@ struct VideoRenderView: NSViewRepresentable {
     func makeNSView(context: Context) -> SampleBufferDisplayView {
         let view = SampleBufferDisplayView()
         context.coordinator.renderCoordinator.attach(display: view.display)
+        view.applyZoom(scale: scale, center: center, videoSize: videoSize)
         return view
     }
 
     func updateNSView(_ nsView: SampleBufferDisplayView, context: Context) {
         context.coordinator.renderCoordinator.attach(display: nsView.display)
+        nsView.applyZoom(scale: scale, center: center, videoSize: videoSize)
     }
 
     static func dismantleNSView(_ nsView: SampleBufferDisplayView, coordinator: Coordinator) {
@@ -34,15 +39,47 @@ struct VideoRenderView: NSViewRepresentable {
 
 final class SampleBufferDisplayView: NSView {
     let display = SampleBufferDisplay()
+    private var currentScale: CGFloat = 1.0
+    private var currentCenter: CGPoint = CGPoint(x: 0.5, y: 0.5)
+    private var currentVideoSize: CGSize?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer = display.layer
+        let container = CALayer()
+        container.backgroundColor = CGColor(gray: 0, alpha: 1)
+        container.masksToBounds = true
+        layer = container
+        container.addSublayer(display.layer)
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func layout() {
+        super.layout()
+        layer?.frame = bounds
+        display.layer.frame = bounds
+        refreshTransform()
+    }
+
+    func applyZoom(scale: CGFloat, center: CGPoint, videoSize: CGSize?) {
+        currentScale = scale
+        currentCenter = center
+        currentVideoSize = videoSize
+        refreshTransform()
+    }
+
+    private func refreshTransform() {
+        let baseRect = MouseCoordinateMapper.aspectFitRect(for: currentVideoSize, in: bounds)
+        let tx = -(currentCenter.x - 0.5) * baseRect.width * currentScale
+        // The NSView backing layer is y-up; center.y is in y-down (top of video = 0), so panning
+        // toward the bottom of the video means moving the layer's content up in screen space —
+        // which is +y in this layer's coordinate system.
+        let ty = (currentCenter.y - 0.5) * baseRect.height * currentScale
+        let transform = CGAffineTransform(scaleX: currentScale, y: currentScale)
+            .concatenating(CGAffineTransform(translationX: tx, y: ty))
+        display.setVideoTransform(transform)
+    }
 }

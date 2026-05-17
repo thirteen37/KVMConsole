@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 @MainActor
@@ -16,10 +17,12 @@ public final class ViewerViewModel: ObservableObject {
 
     public var toggleFullscreen: (() -> Void)?
     public let renderCoordinator: SampleBufferRenderCoordinator
+    public let zoom = ViewerZoomState()
 
     private let session: NanoKVMSession
     private let passwordStore: PasswordStore
     private var bannerTask: Task<Void, Never>?
+    private var zoomObservers: Set<AnyCancellable> = []
 
     public init(device: Device, passwordStore: PasswordStore = KeychainPasswordStore()) {
         let renderCoordinator = SampleBufferRenderCoordinator()
@@ -37,11 +40,21 @@ public final class ViewerViewModel: ObservableObject {
             guard let self else { return }
             if self.videoSize != videoSize {
                 self.videoSize = videoSize
+                self.zoom.videoSize = videoSize
             }
         }
         session.onFlush = { [weak self] in
             self?.flushVideo()
         }
+
+        // Forward only scale/center changes — the body uses those to drive VideoRenderView. Other
+        // zoom @Published fields (notably the per-mouse-event cursorNormalized) would re-render the
+        // viewer and re-run updateUIView/updateNSView on every cursor move; MinimapView observes
+        // the zoom directly via @ObservedObject and handles those updates on its own.
+        zoom.$scale.dropFirst().map { _ in () }
+            .merge(with: zoom.$center.dropFirst().map { _ in () })
+            .sink { [weak self] in self?.objectWillChange.send() }
+            .store(in: &zoomObservers)
 
         attemptAutoConnect()
     }
@@ -140,5 +153,8 @@ public final class ViewerViewModel: ObservableObject {
     private func flushVideo() {
         renderCoordinator.flush()
         videoSize = nil
+        zoom.videoSize = nil
+        zoom.cursorNormalized = nil
+        zoom.reset()
     }
 }
