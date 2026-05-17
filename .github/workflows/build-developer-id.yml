@@ -46,13 +46,13 @@ jobs:
       - name: Build signed app
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          FINAL_ZIP_PATH: build/developer-id/NanoKVM-DeveloperID-signed.zip
+          FINAL_ZIP_PATH: build/developer-id/KVMConsole-DeveloperID-signed.zip
           NOTARIZE: "0"
         run: Scripts/build-developer-id.sh
 
       - name: Upload signed build artifact
         uses: actions/upload-artifact@v7
         with:
-          name: NanoKVM-DeveloperID-signed
-          path: build/developer-id/NanoKVM-DeveloperID-signed.zip
+          name: KVMConsole-DeveloperID-signed
+          path: build/developer-id/KVMConsole-DeveloperID-signed.zip
           if-no-files-found: error

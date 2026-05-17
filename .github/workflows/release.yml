@@ -73,7 +73,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
           NOTARY_APP_PASSWORD: ${{ secrets.NOTARY_APP_PASSWORD }}
-          NOTARY_PROFILE: NanoKVM-DeveloperID
+          NOTARY_PROFILE: KVMConsole-DeveloperID
         run: |
           xcrun notarytool store-credentials "$NOTARY_PROFILE" \
             --apple-id "$NOTARY_APPLE_ID" \
@@ -84,17 +84,17 @@ jobs:
       - name: Build, notarize, and staple
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          FINAL_ZIP_PATH: build/developer-id/NanoKVM-${{ steps.release.outputs.tag }}-DeveloperID-notarized.zip
+          FINAL_ZIP_PATH: build/developer-id/KVMConsole-${{ steps.release.outputs.tag }}-DeveloperID-notarized.zip
           NOTARY_KEYCHAIN: ${{ steps.signing.outputs.keychain }}
-          NOTARY_PROFILE: NanoKVM-DeveloperID
+          NOTARY_PROFILE: KVMConsole-DeveloperID
           NOTARIZE: "1"
         run: Scripts/build-developer-id.sh
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v7
         with:
-          name: NanoKVM-${{ steps.release.outputs.tag }}-DeveloperID-notarized
-          path: build/developer-id/NanoKVM-${{ steps.release.outputs.tag }}-DeveloperID-notarized.zip
+          name: KVMConsole-${{ steps.release.outputs.tag }}-DeveloperID-notarized
+          path: build/developer-id/KVMConsole-${{ steps.release.outputs.tag }}-DeveloperID-notarized.zip
           if-no-files-found: error
 
       - name: Upload asset to GitHub Release
@@ -103,5 +103,5 @@ jobs:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: |
           gh release upload "$RELEASE_TAG" \
-            build/developer-id/NanoKVM-"$RELEASE_TAG"-DeveloperID-notarized.zip \
+            build/developer-id/KVMConsole-"$RELEASE_TAG"-DeveloperID-notarized.zip \
             --clobber
