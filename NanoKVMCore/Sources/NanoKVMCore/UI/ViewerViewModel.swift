@@ -21,20 +21,30 @@ public final class ViewerViewModel: ObservableObject {
 
     private let session: NanoKVMSession
     private let passwordStore: PasswordStore
+    private let onConnected: ((Device.ID) -> Void)?
     private var bannerTask: Task<Void, Never>?
     private var zoomObservers: Set<AnyCancellable> = []
 
-    public init(device: Device, passwordStore: PasswordStore = KeychainPasswordStore()) {
+    public init(
+        device: Device,
+        passwordStore: PasswordStore = KeychainPasswordStore(),
+        onConnected: ((Device.ID) -> Void)? = nil
+    ) {
         let renderCoordinator = SampleBufferRenderCoordinator()
         self.device = device
         self.passwordStore = passwordStore
+        self.onConnected = onConnected
         self.renderCoordinator = renderCoordinator
         self.session = NanoKVMSession(passwordStore: passwordStore, renderCoordinator: renderCoordinator)
         self.status = NanoKVMSessionState.disconnected.displayText
 
         session.onStateChange = { [weak self] state in
-            self?.status = state.displayText
-            self?.errorMessage = state.errorMessage
+            guard let self else { return }
+            self.status = state.displayText
+            self.errorMessage = state.errorMessage
+            if state == .streaming {
+                self.onConnected?(self.device.id)
+            }
         }
         session.onVideoSize = { [weak self] videoSize in
             guard let self else { return }

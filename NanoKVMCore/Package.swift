@@ -12,7 +12,10 @@ let package = Package(
         .library(name: "NanoKVMCore", targets: ["NanoKVMCore"])
     ],
     targets: [
-        .target(name: "NanoKVMCore"),
+        .target(
+            name: "NanoKVMCore",
+            resources: [.process("Resources.xcassets")]
+        ),
         .testTarget(
             name: "NanoKVMCoreTests",
             dependencies: ["NanoKVMCore"]
