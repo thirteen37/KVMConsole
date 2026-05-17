@@ -68,7 +68,7 @@ struct ViewerView: View {
         ZStack {
             Color.black
 
-            VideoRenderView(sampleBuffer: model.latestSampleBuffer, flushToken: model.flushToken)
+            VideoRenderView(renderCoordinator: model.renderCoordinator)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             PointerCaptureView(

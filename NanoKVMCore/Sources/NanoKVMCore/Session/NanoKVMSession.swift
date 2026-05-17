@@ -41,7 +41,7 @@ public enum NanoKVMSessionState: Equatable {
 @MainActor
 public final class NanoKVMSession {
     public var onStateChange: ((NanoKVMSessionState) -> Void)?
-    public var onSampleBuffer: ((CMSampleBuffer, CGSize?) -> Void)?
+    public var onVideoSize: ((CGSize?) -> Void)?
     public var onFlush: (() -> Void)?
 
     public private(set) var state: NanoKVMSessionState = .disconnected {
@@ -53,13 +53,19 @@ public final class NanoKVMSession {
     private var client: NanoKVMClient?
     private var videoSocket: H264StreamSocket?
     private var controlSocket: ControlSocket?
+    private var mouseMoveCoalescer: MouseMoveCoalescer?
     private var decoder: H264Decoder?
     private var streamTask: Task<Void, Never>?
     private var generation: Int = 0
     private let passwordStore: PasswordStore
+    private let renderCoordinator: SampleBufferRenderCoordinator
 
-    public init(passwordStore: PasswordStore = KeychainPasswordStore()) {
+    public init(
+        passwordStore: PasswordStore = KeychainPasswordStore(),
+        renderCoordinator: SampleBufferRenderCoordinator = SampleBufferRenderCoordinator()
+    ) {
         self.passwordStore = passwordStore
+        self.renderCoordinator = renderCoordinator
     }
 
     public var isStreaming: Bool {
@@ -73,8 +79,13 @@ public final class NanoKVMSession {
         state = .connecting
 
         let client = NanoKVMClient(device: configuration.device)
-        let decoder = H264Decoder { [weak self] sampleBuffer in
-            self?.onSampleBuffer?(sampleBuffer, Self.videoSize(from: sampleBuffer))
+        let decoder = H264Decoder { [renderCoordinator] sampleBuffer in
+            renderCoordinator.enqueue(sampleBuffer)
+            let videoSize = Self.videoSize(from: sampleBuffer)
+            Task { @MainActor [weak self] in
+                guard let self, self.generation == myGeneration else { return }
+                self.onVideoSize?(videoSize)
+            }
         }
         self.client = client
         self.decoder = decoder
@@ -105,6 +116,9 @@ public final class NanoKVMSession {
                     }
                 }
                 localControlSocket = controlSocket
+                let mouseMoveCoalescer = MouseMoveCoalescer { report in
+                    await controlSocket.sendMouseAbsoluteReport(report)
+                }
 
                 let videoSocket = H264StreamSocket(device: configuration.device, token: token)
                 let frames = try videoSocket.frames()
@@ -113,6 +127,7 @@ public final class NanoKVMSession {
                 handedOff = await MainActor.run { () -> Bool in
                     guard let self, self.generation == myGeneration, self.state == .connecting else { return false }
                     self.controlSocket = controlSocket
+                    self.mouseMoveCoalescer = mouseMoveCoalescer
                     self.videoSocket = videoSocket
                     self.state = .streaming
                     return true
@@ -164,15 +179,15 @@ public final class NanoKVMSession {
 
     public func sendKeyboardReport(_ report: HIDKeyboardReport) {
         guard let controlSocket else { return }
-        Task {
+        Task(priority: .userInitiated) {
             await controlSocket.sendKeyboardReport(report)
         }
     }
 
     public func sendMouseReport(_ report: HIDMouseAbsoluteReport) {
-        guard let controlSocket else { return }
-        Task {
-            await controlSocket.sendMouseAbsoluteReport(report)
+        guard let mouseMoveCoalescer else { return }
+        Task(priority: .userInitiated) {
+            await mouseMoveCoalescer.enqueue(report)
         }
     }
 
@@ -198,7 +213,10 @@ public final class NanoKVMSession {
 
         let controlSocket = controlSocket
         self.controlSocket = nil
+        let mouseMoveCoalescer = mouseMoveCoalescer
+        self.mouseMoveCoalescer = nil
         Task {
+            await mouseMoveCoalescer?.cancel()
             await controlSocket?.close()
         }
 
@@ -207,7 +225,7 @@ public final class NanoKVMSession {
         client = nil
     }
 
-    private static func videoSize(from sampleBuffer: CMSampleBuffer) -> CGSize? {
+    nonisolated private static func videoSize(from sampleBuffer: CMSampleBuffer) -> CGSize? {
         guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             return nil
         }

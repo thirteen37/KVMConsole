@@ -1,14 +1,11 @@
 import Foundation
-@preconcurrency import CoreMedia
 
 @MainActor
 public final class ViewerViewModel: ObservableObject {
     @Published public var device: Device
     @Published public var status: String
     @Published public var errorMessage: String?
-    @Published public var latestSampleBuffer: CMSampleBuffer?
     @Published public var videoSize: CGSize?
-    @Published public var flushToken = 0
     @Published public var isKeyboardCaptureEnabled = true
     @Published public var isMouseCaptureEnabled = true
     @Published public var isScrollInverted = true
@@ -18,27 +15,29 @@ public final class ViewerViewModel: ObservableObject {
     @Published public var showFullscreenBanner: Bool = false
 
     public var toggleFullscreen: (() -> Void)?
+    public let renderCoordinator: SampleBufferRenderCoordinator
 
     private let session: NanoKVMSession
     private let passwordStore: PasswordStore
     private var bannerTask: Task<Void, Never>?
 
     public init(device: Device, passwordStore: PasswordStore = KeychainPasswordStore()) {
+        let renderCoordinator = SampleBufferRenderCoordinator()
         self.device = device
         self.passwordStore = passwordStore
-        self.session = NanoKVMSession(passwordStore: passwordStore)
+        self.renderCoordinator = renderCoordinator
+        self.session = NanoKVMSession(passwordStore: passwordStore, renderCoordinator: renderCoordinator)
         self.status = NanoKVMSessionState.disconnected.displayText
 
         session.onStateChange = { [weak self] state in
             self?.status = state.displayText
             self?.errorMessage = state.errorMessage
         }
-        session.onSampleBuffer = { [weak self] sampleBuffer, videoSize in
+        session.onVideoSize = { [weak self] videoSize in
             guard let self else { return }
             if self.videoSize != videoSize {
                 self.videoSize = videoSize
             }
-            self.latestSampleBuffer = sampleBuffer
         }
         session.onFlush = { [weak self] in
             self?.flushVideo()
@@ -139,8 +138,7 @@ public final class ViewerViewModel: ObservableObject {
     }
 
     private func flushVideo() {
-        latestSampleBuffer = nil
+        renderCoordinator.flush()
         videoSize = nil
-        flushToken += 1
     }
 }
