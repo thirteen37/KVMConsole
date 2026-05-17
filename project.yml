@@ -1,4 +1,4 @@
-name: NanoKVM
+name: KVMConsole
 options:
   bundleIdPrefix: io.lyx
   deploymentTarget:
@@ -7,8 +7,8 @@ options:
   createIntermediateGroups: true
   developmentLanguage: en
 packages:
-  NanoKVMCore:
-    path: NanoKVMCore
+  KVMCore:
+    path: KVMCore
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -18,75 +18,76 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 9URLHJ84PY
 targets:
-  NanoKVM:
+  KVMConsole:
     type: application
     platform: macOS
     sources:
-      - path: NanoKVM
+      - path: KVMConsole
         excludes:
           - "Assets.xcassets"
           - "Resources/Info.plist"
-      - path: NanoKVM/Assets.xcassets
+      - path: KVMConsole/Assets.xcassets
         buildPhase: resources
     dependencies:
-      - package: NanoKVMCore
+      - package: KVMCore
     info:
-      path: NanoKVM/Resources/Info.plist
+      path: KVMConsole/Resources/Info.plist
       properties:
-        CFBundleName: NanoKVM
-        CFBundleDisplayName: NanoKVM
+        CFBundleName: KVM Console
+        CFBundleDisplayName: KVM Console
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         LSMinimumSystemVersion: "15.0"
         NSHumanReadableCopyright: "© 2026 Yu-Xi Lim"
+        NSLocalNetworkUsageDescription: "KVM Console connects to your KVM device over the local network."
     entitlements:
-      path: NanoKVM/Resources/NanoKVM.entitlements
+      path: KVMConsole/Resources/KVMConsole.entitlements
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
-        com.apple.security.network.server: false
+        com.apple.security.network.server: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.NanoKVM
+        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.KVMConsole
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_USER_SCRIPT_SANDBOXING: YES
-  NanoKVMTests:
+  KVMConsoleTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - NanoKVMTests
+      - KVMConsoleTests
     dependencies:
-      - target: NanoKVM
-      - package: NanoKVMCore
+      - target: KVMConsole
+      - package: KVMCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.NanoKVMTests
+        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.KVMConsoleTests
         GENERATE_INFOPLIST_FILE: YES
-  NanoKVMiPad:
+  KVMConsoleiPad:
     type: application
     platform: iOS
     sources:
-      - path: NanoKVMiPad
+      - path: KVMConsoleiPad
         excludes:
           - "Assets.xcassets"
           - "Resources/Info.plist"
-      - path: NanoKVMiPad/Assets.xcassets
+      - path: KVMConsoleiPad/Assets.xcassets
         buildPhase: resources
     dependencies:
-      - package: NanoKVMCore
+      - package: KVMCore
     info:
-      path: NanoKVMiPad/Resources/Info.plist
+      path: KVMConsoleiPad/Resources/Info.plist
       properties:
-        CFBundleName: NanoKVM
-        CFBundleDisplayName: NanoKVM
+        CFBundleName: KVM Console
+        CFBundleDisplayName: KVM Console
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         GCSupportsControllerUserInteraction: true
         LSRequiresIPhoneOS: true
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
-        NSLocalNetworkUsageDescription: "NanoKVM connects to your KVM device over the local network."
+        NSLocalNetworkUsageDescription: "KVM Console connects to your KVM device over the local network."
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -99,41 +100,41 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
     entitlements:
-      path: NanoKVMiPad/Resources/NanoKVM.entitlements
+      path: KVMConsoleiPad/Resources/KVMConsole.entitlements
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.NanoKVM
+        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.KVMConsole
         TARGETED_DEVICE_FAMILY: "2"
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
         SWIFT_STRICT_CONCURRENCY: complete
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
-  NanoKVMiPadTests:
+  KVMConsoleiPadTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - NanoKVMiPadTests
+      - KVMConsoleiPadTests
     dependencies:
-      - target: NanoKVMiPad
-      - package: NanoKVMCore
+      - target: KVMConsoleiPad
+      - package: KVMCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.NanoKVMiPadTests
+        PRODUCT_BUNDLE_IDENTIFIER: io.lyx.KVMConsoleiPadTests
         GENERATE_INFOPLIST_FILE: YES
 schemes:
-  NanoKVM:
+  KVMConsole:
     build:
       targets:
-        NanoKVM: all
-        NanoKVMTests: [test]
+        KVMConsole: all
+        KVMConsoleTests: [test]
     test:
       targets:
-        - NanoKVMTests
-  NanoKVMiPad:
+        - KVMConsoleTests
+  KVMConsoleiPad:
     build:
       targets:
-        NanoKVMiPad: all
-        NanoKVMiPadTests: [test]
+        KVMConsoleiPad: all
+        KVMConsoleiPadTests: [test]
     test:
       targets:
-        - NanoKVMiPadTests
+        - KVMConsoleiPadTests

@@ -46,8 +46,8 @@ Run tests locally without signing:
 ```sh
 xcodegen generate
 xcodebuild test \
-  -project NanoKVM.xcodeproj \
-  -scheme NanoKVM \
+  -project KVMConsole.xcodeproj \
+  -scheme KVMConsole \
   -destination 'platform=macOS' \
   CODE_SIGNING_ALLOWED=NO \
   CODE_SIGNING_REQUIRED=NO \
@@ -58,13 +58,13 @@ xcodebuild test \
 Build a signed but not notarized app:
 
 ```sh
-NOTARIZE=0 FINAL_ZIP_PATH=build/developer-id/NanoKVM-DeveloperID-signed.zip Scripts/build-developer-id.sh
+NOTARIZE=0 FINAL_ZIP_PATH=build/developer-id/KVMConsole-DeveloperID-signed.zip Scripts/build-developer-id.sh
 ```
 
 Build, notarize, staple, and package locally:
 
 ```sh
-xcrun notarytool store-credentials NanoKVM-DeveloperID \
+xcrun notarytool store-credentials KVMConsole-DeveloperID \
   --apple-id "you@example.com" \
   --team-id 9URLHJ84PY \
   --password "app-specific-password"
@@ -80,7 +80,7 @@ Scripts/build-developer-id.sh
 4. The workflow imports the Developer ID certificate from GitHub Secrets.
 5. The workflow stores notarization credentials in the temporary signing keychain.
 6. The workflow runs `Scripts/build-developer-id.sh` with notarization enabled.
-7. The workflow uploads `NanoKVM-<tag>-DeveloperID-notarized.zip` to the release page.
+7. The workflow uploads `KVMConsole-<tag>-DeveloperID-notarized.zip` to the release page.
 
 The release page asset is the final user-downloadable app zip.
 

@@ -26,13 +26,13 @@ jobs:
         run: xcodegen generate
 
       - name: Run package tests
-        run: swift test --package-path NanoKVMCore
+        run: swift test --package-path KVMCore
 
       - name: Run macOS tests
         run: |
           xcodebuild test \
-            -project NanoKVM.xcodeproj \
-            -scheme NanoKVM \
+            -project KVMConsole.xcodeproj \
+            -scheme KVMConsole \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -42,8 +42,8 @@ jobs:
       - name: Run iPadOS tests
         run: |
           xcodebuild test \
-            -project NanoKVM.xcodeproj \
-            -scheme NanoKVMiPad \
+            -project KVMConsole.xcodeproj \
+            -scheme KVMConsoleiPad \
             -destination 'platform=iOS Simulator,name=iPad Pro 11-inch (M5)' \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
