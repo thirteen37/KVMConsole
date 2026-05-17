@@ -215,9 +215,10 @@ public actor GLKVMControlSocket {
                 Self.logInboundMessage(message)
             } catch {
                 KVMLog.glkvm.error("GLKVM control WebSocket closed: \(error.localizedDescription, privacy: .public)")
+                let wasCancelled = Task.isCancelled
                 let callback = onDisconnect
                 close()
-                if !Task.isCancelled {
+                if !wasCancelled {
                     callback?(error)
                 }
                 return

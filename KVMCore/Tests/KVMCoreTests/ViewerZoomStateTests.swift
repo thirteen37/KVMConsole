@@ -1,5 +1,5 @@
 import XCTest
-@testable import NanoKVMCore
+@testable import KVMCore
 
 @MainActor
 final class ViewerZoomStateTests: XCTestCase {

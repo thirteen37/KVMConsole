@@ -11,16 +11,8 @@ let package = Package(
     products: [
         .library(name: "KVMCore", targets: ["KVMCore"])
     ],
-    dependencies: [
-        .package(url: "https://github.com/webrtc-sdk/Specs.git", exact: "125.6422.02")
-    ],
     targets: [
-        .target(
-            name: "KVMCore",
-            dependencies: [
-                .product(name: "WebRTC", package: "Specs")
-            ]
-        ),
+        .target(name: "KVMCore"),
         .testTarget(
             name: "KVMCoreTests",
             dependencies: ["KVMCore"]

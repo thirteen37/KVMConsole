@@ -23,12 +23,12 @@ public final class SampleBufferDisplay {
 
     public func enqueue(_ sampleBuffer: CMSampleBuffer) {
         if layer.status == .failed {
-            KVMLog.webrtc.error("Sample buffer display layer failed: \(String(describing: self.layer.error), privacy: .public)")
+            KVMLog.video.error("Sample buffer display layer failed: \(String(describing: self.layer.error), privacy: .public)")
             layer.flush()
         }
         enqueuedCount += 1
         if enqueuedCount == 1 || enqueuedCount % 120 == 0 {
-            KVMLog.webrtc.info("Sample buffer display layer enqueue count: \(self.enqueuedCount, privacy: .public)")
+            KVMLog.video.info("Sample buffer display layer enqueue count: \(self.enqueuedCount, privacy: .public)")
         }
         layer.enqueue(sampleBuffer)
     }

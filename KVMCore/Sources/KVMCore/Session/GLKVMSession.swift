@@ -18,7 +18,6 @@ public final class GLKVMSession: KVMSession {
     private var client: GLKVMClient?
     private var controlSocket: GLKVMControlSocket?
     private var mouseMoveCoalescer: MouseMoveCoalescer?
-    private var webRTC: WebRTCPipeline?
     private var mediaSocket: GLKVMH264MediaSocket?
     private var decoder: H264Decoder?
     private var streamTask: Task<Void, Never>?
@@ -77,7 +76,7 @@ public final class GLKVMSession: KVMSession {
                 }
 
                 try await client.setStreamerVideoFormatH264()
-                KVMLog.webrtc.info("GLKVM streamer video format set to H.264")
+                KVMLog.glkvm.info("GLKVM streamer video format set to H.264")
 
                 let controlSocket = GLKVMControlSocket(device: configuration.device, authToken: authToken)
                 try await controlSocket.connect()
@@ -194,8 +193,6 @@ public final class GLKVMSession: KVMSession {
             streamTask?.cancel()
         }
         streamTask = nil
-        webRTC?.stop()
-        webRTC = nil
         mediaSocket?.cancel()
         mediaSocket = nil
 
