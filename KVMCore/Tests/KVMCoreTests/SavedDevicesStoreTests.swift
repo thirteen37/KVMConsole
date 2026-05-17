@@ -65,6 +65,26 @@ final class SavedDevicesStoreTests: XCTestCase {
         XCTAssertNil(try passwordStore.password(for: oldAccount))
     }
 
+    func test_markConnectedUpdatesTimestampAndPersists() throws {
+        let fixture = makeFixture()
+        defer { fixture.cleanup() }
+        let passwordStore = InMemoryPasswordStore()
+        let store = SavedDevicesStore(storeURL: fixture.storeURL, passwordStore: passwordStore)
+        let device = makeDevice(name: "Lab")
+        store.add(device)
+
+        let before = Date()
+        store.markConnected(device.id)
+
+        let connectedAt = try XCTUnwrap(store.devices.first?.lastConnectedAt)
+        XCTAssertGreaterThanOrEqual(connectedAt.timeIntervalSince1970, before.timeIntervalSince1970 - 1)
+        XCTAssertLessThanOrEqual(connectedAt.timeIntervalSinceNow, 1)
+
+        let restored = SavedDevicesStore(storeURL: fixture.storeURL, passwordStore: passwordStore)
+        let restoredConnectedAt = try XCTUnwrap(restored.devices.first?.lastConnectedAt)
+        XCTAssertEqual(restoredConnectedAt.timeIntervalSince1970, connectedAt.timeIntervalSince1970, accuracy: 0.001)
+    }
+
     private func makeFixture() -> TemporaryStoreFixture {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("SavedDevicesStoreTests-\(UUID().uuidString)", isDirectory: true)

@@ -8,8 +8,9 @@ struct ViewerHostView: View {
     var body: some View {
         Group {
             if let deviceID, let device = devicesStore.device(id: deviceID) {
-                ViewerView(device: device)
-                    .navigationTitle(device.name)
+                ViewerView(device: device) { id in
+                    devicesStore.markConnected(id)
+                }
             } else {
                 missingDevice
             }
@@ -37,8 +38,8 @@ struct ViewerView: View {
     @State private var keyboardFocusToken = 0
     @State private var pendingVirtualKey: VirtualKeyTap?
 
-    init(device: Device) {
-        _model = StateObject(wrappedValue: ViewerViewModel(device: device))
+    init(device: Device, onConnected: ((Device.ID) -> Void)? = nil) {
+        _model = StateObject(wrappedValue: ViewerViewModel(device: device, onConnected: onConnected))
     }
 
     var body: some View {
@@ -58,6 +59,7 @@ struct ViewerView: View {
             }
         }
         .background(Color.black)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
         .onDisappear {
             model.disconnect()
@@ -105,26 +107,63 @@ struct ViewerView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            VStack(spacing: 0) {
+                Text(model.device.name)
+                    .font(.headline)
+                Text(model.device.host)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+
         ToolbarItemGroup(placement: .topBarTrailing) {
             Toggle(isOn: $model.isKeyboardCaptureEnabled) {
                 Label("Keyboard", systemImage: "keyboard")
             }
+            .toggleStyle(.button)
+            .labelStyle(.iconOnly)
+            .help("Keyboard capture")
+
             Toggle(isOn: $model.isMouseCaptureEnabled) {
-                Label("Pointer", systemImage: "cursorarrow")
+                Label("Mouse", systemImage: "cursorarrow")
             }
+            .toggleStyle(.button)
+            .labelStyle(.iconOnly)
+            .help("Mouse capture")
+
             Toggle(isOn: $model.isScrollInverted) {
                 Label("Invert Scroll", systemImage: "arrow.up.arrow.down")
             }
+            .toggleStyle(.button)
+            .labelStyle(.iconOnly)
+            .help("Invert scroll")
+
             Toggle(isOn: $showModifierBar) {
                 Label("Modifiers", systemImage: "command")
             }
+            .toggleStyle(.button)
+            .labelStyle(.iconOnly)
+            .help("Modifier bar")
+
             Button {
                 keyboardFocusToken += 1
             } label: {
                 Label("Show Keyboard", systemImage: "keyboard.chevron.compact.down")
             }
-            Text(model.state.displayText)
-                .foregroundStyle(statusColor)
+            .labelStyle(.iconOnly)
+            .help("Show keyboard")
+
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 8, height: 8)
+                Text(model.state.displayText)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(minWidth: 92, alignment: .leading)
+            }
+
             if model.powerControl != nil {
                 Menu {
                     Button("On") { model.powerOn() }
@@ -136,14 +175,25 @@ struct ViewerView: View {
                 } label: {
                     Label("Power", systemImage: "power")
                 }
+                .labelStyle(.iconOnly)
+                .help("Power")
             }
-            Button(model.isStreaming ? "Disconnect" : "Reconnect") {
+
+            Button {
                 if model.isStreaming {
                     model.disconnect()
                 } else {
                     model.reconnect()
                 }
+            } label: {
+                Label(
+                    model.isStreaming ? "Disconnect" : "Reconnect",
+                    systemImage: model.isStreaming ? "xmark.circle" : "arrow.clockwise"
+                )
+                .frame(minWidth: 92, alignment: .leading)
             }
+            .labelStyle(.titleAndIcon)
+            .controlSize(.small)
         }
     }
 

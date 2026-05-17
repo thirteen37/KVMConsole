@@ -7,11 +7,13 @@ public enum KVMSessionFactory {
         passwordStore: PasswordStore,
         renderCoordinator: SampleBufferRenderCoordinator
     ) -> any KVMSession {
-        switch device.kind {
-        case .nanoKVM:
+        switch device.kvmType {
+        case .nanoKVMLite, .nanoKVMUSB:
             return NanoKVMSession(passwordStore: passwordStore, renderCoordinator: renderCoordinator)
-        case .glkvm:
+        case .comet:
             return GLKVMSession(passwordStore: passwordStore, renderCoordinator: renderCoordinator)
+        case .appleRFB:
+            return NanoKVMSession(passwordStore: passwordStore, renderCoordinator: renderCoordinator)
         }
     }
 }

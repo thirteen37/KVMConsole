@@ -8,7 +8,7 @@ final class GLKVMClientTests: XCTestCase {
             json: "{}",
             headers: ["Set-Cookie": "auth_token=abc123; Path=/; HttpOnly"]
         ))
-        let device = Device(name: "Comet", host: "kvm.local", scheme: .https, kind: .glkvm)
+        let device = Device(name: "Comet", host: "kvm.local", scheme: .https, kvmType: .comet)
         let client = GLKVMClient(device: device, session: session)
 
         try await client.login(password: "secret")
@@ -24,7 +24,7 @@ final class GLKVMClientTests: XCTestCase {
     func test_atxResetPostsAuthenticatedAction() async throws {
         let session = MockURLSession()
         session.enqueue(.init(json: "{}"))
-        let device = Device(name: "Comet", host: "kvm.local", scheme: .https, kind: .glkvm)
+        let device = Device(name: "Comet", host: "kvm.local", scheme: .https, kvmType: .comet)
         let client = GLKVMClient(device: device, session: session)
         await client.setAuthToken("token")
 
@@ -39,7 +39,7 @@ final class GLKVMClientTests: XCTestCase {
     func test_setStreamerVideoFormatH264PostsAuthenticatedParams() async throws {
         let session = MockURLSession()
         session.enqueue(.init(json: "{}"))
-        let device = Device(name: "Comet", host: "kvm.local", scheme: .https, kind: .glkvm)
+        let device = Device(name: "Comet", host: "kvm.local", scheme: .https, kvmType: .comet)
         let client = GLKVMClient(device: device, session: session)
         await client.setAuthToken("token")
 

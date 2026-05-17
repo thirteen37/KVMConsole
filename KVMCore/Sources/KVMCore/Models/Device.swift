@@ -2,14 +2,32 @@ import Foundation
 
 public struct Device: Identifiable, Hashable, Codable, Sendable {
     public enum Scheme: String, Codable, Sendable { case http, https }
-    public enum Kind: String, Codable, Sendable, CaseIterable {
-        case nanoKVM
-        case glkvm
+
+    public enum KVMType: String, Codable, Sendable, CaseIterable {
+        case nanoKVMLite
+        case nanoKVMUSB
+        case comet
+        case appleRFB
 
         public var displayName: String {
             switch self {
-            case .nanoKVM: return "NanoKVM"
-            case .glkvm: return "GLKVM (Comet GL-RM1)"
+            case .nanoKVMLite: return "NanoKVM Lite"
+            case .nanoKVMUSB: return "NanoKVM USB"
+            case .comet: return "GL.iNet Comet"
+            case .appleRFB: return "Apple Screen Sharing"
+            }
+        }
+
+        public enum IconSource: Sendable {
+            case systemSymbol(String)
+            case bundledAsset(String)
+        }
+
+        public var iconSource: IconSource {
+            switch self {
+            case .nanoKVMLite, .nanoKVMUSB: return .bundledAsset("sipeed")
+            case .comet: return .bundledAsset("glinet")
+            case .appleRFB: return .systemSymbol("apple.logo")
             }
         }
     }
@@ -20,8 +38,9 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
     public var port: Int
     public var scheme: Scheme
     public var username: String
-    public var kind: Kind
+    public var kvmType: KVMType
     public var allowsInsecureTLS: Bool
+    public var lastConnectedAt: Date?
 
     public init(
         id: UUID = UUID(),
@@ -30,8 +49,9 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
         port: Int? = nil,
         scheme: Scheme = .http,
         username: String = "admin",
-        kind: Kind = .nanoKVM,
-        allowsInsecureTLS: Bool? = nil
+        kvmType: KVMType = .nanoKVMUSB,
+        allowsInsecureTLS: Bool? = nil,
+        lastConnectedAt: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -39,8 +59,9 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
         self.port = port ?? (scheme == .https ? 443 : 80)
         self.scheme = scheme
         self.username = username
-        self.kind = kind
-        self.allowsInsecureTLS = allowsInsecureTLS ?? (kind == .glkvm)
+        self.kvmType = kvmType
+        self.allowsInsecureTLS = allowsInsecureTLS ?? (kvmType == .comet)
+        self.lastConnectedAt = lastConnectedAt
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -50,8 +71,9 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
         case port
         case scheme
         case username
-        case kind
+        case kvmType
         case allowsInsecureTLS
+        case lastConnectedAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -62,8 +84,9 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
         port = try container.decode(Int.self, forKey: .port)
         scheme = try container.decode(Scheme.self, forKey: .scheme)
         username = try container.decode(String.self, forKey: .username)
-        kind = try container.decodeIfPresent(Kind.self, forKey: .kind) ?? .nanoKVM
-        allowsInsecureTLS = try container.decodeIfPresent(Bool.self, forKey: .allowsInsecureTLS) ?? (kind == .glkvm)
+        kvmType = try container.decodeIfPresent(KVMType.self, forKey: .kvmType) ?? .nanoKVMUSB
+        allowsInsecureTLS = try container.decodeIfPresent(Bool.self, forKey: .allowsInsecureTLS) ?? (kvmType == .comet)
+        lastConnectedAt = try container.decodeIfPresent(Date.self, forKey: .lastConnectedAt)
     }
 
     public var baseURL: URL? {

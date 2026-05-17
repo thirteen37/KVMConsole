@@ -12,7 +12,10 @@ let package = Package(
         .library(name: "KVMCore", targets: ["KVMCore"])
     ],
     targets: [
-        .target(name: "KVMCore"),
+        .target(
+            name: "KVMCore",
+            resources: [.process("Resources.xcassets")]
+        ),
         .testTarget(
             name: "KVMCoreTests",
             dependencies: ["KVMCore"]

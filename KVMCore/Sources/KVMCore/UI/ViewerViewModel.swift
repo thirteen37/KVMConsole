@@ -21,13 +21,19 @@ public final class ViewerViewModel: ObservableObject {
 
     private let session: any KVMSession
     private let passwordStore: PasswordStore
+    private let onConnected: ((Device.ID) -> Void)?
     private var bannerTask: Task<Void, Never>?
     private var zoomObservers: Set<AnyCancellable> = []
 
-    public init(device: Device, passwordStore: PasswordStore = KeychainPasswordStore()) {
+    public init(
+        device: Device,
+        passwordStore: PasswordStore = KeychainPasswordStore(),
+        onConnected: ((Device.ID) -> Void)? = nil
+    ) {
         let renderCoordinator = SampleBufferRenderCoordinator()
         self.device = device
         self.passwordStore = passwordStore
+        self.onConnected = onConnected
         self.renderCoordinator = renderCoordinator
         self.session = KVMSessionFactory.make(
             for: device,
@@ -35,8 +41,12 @@ public final class ViewerViewModel: ObservableObject {
             renderCoordinator: renderCoordinator
         )
         session.onStateChange = { [weak self] state in
-            self?.state = state
-            self?.errorMessage = state.errorMessage
+            guard let self else { return }
+            self.state = state
+            self.errorMessage = state.errorMessage
+            if state == .streaming {
+                self.onConnected?(self.device.id)
+            }
         }
         session.onVideoSize = { [weak self] videoSize in
             guard let self else { return }

@@ -15,9 +15,9 @@ public struct DeviceEditorView: View {
     @State private var port: String
     @State private var scheme: Device.Scheme
     @State private var username: String
-    @State private var kind: Device.Kind
     @State private var allowsInsecureTLS: Bool
     @State private var password: String
+    @State private var kvmType: Device.KVMType
     @State private var showPassword: Bool = false
 
     init(
@@ -37,18 +37,18 @@ public struct DeviceEditorView: View {
             _port = State(initialValue: "80")
             _scheme = State(initialValue: .http)
             _username = State(initialValue: "admin")
-            _kind = State(initialValue: .nanoKVM)
             _allowsInsecureTLS = State(initialValue: false)
             _password = State(initialValue: "")
+            _kvmType = State(initialValue: .nanoKVMUSB)
         case .edit(let device):
             _name = State(initialValue: device.name)
             _host = State(initialValue: device.host)
             _port = State(initialValue: String(device.port))
             _scheme = State(initialValue: device.scheme)
             _username = State(initialValue: device.username)
-            _kind = State(initialValue: device.kind)
             _allowsInsecureTLS = State(initialValue: device.allowsInsecureTLS)
             _password = State(initialValue: savedPassword ?? "")
+            _kvmType = State(initialValue: device.kvmType)
         }
     }
 
@@ -58,25 +58,30 @@ public struct DeviceEditorView: View {
 
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 8) {
                 GridRow {
+                    Text("Type")
+                    Picker("Type", selection: $kvmType) {
+                        ForEach(Device.KVMType.allCases, id: \.self) { type in
+                            Label {
+                                Text(type.displayName)
+                            } icon: {
+                                KVMTypeIcon(type, size: 16)
+                            }
+                            .tag(type)
+                        }
+                    }
+                    .labelsHidden()
+                    .onChange(of: kvmType) { _, newType in
+                        applyDefaults(for: newType)
+                    }
+                }
+                GridRow {
                     Text("Name")
                     TextField("My KVM", text: $name)
                         .textFieldStyle(.roundedBorder)
                 }
                 GridRow {
-                    Text("Type")
-                    Picker("Type", selection: $kind) {
-                        ForEach(Device.Kind.allCases, id: \.self) { kind in
-                            Text(kind.displayName).tag(kind)
-                        }
-                    }
-                    .labelsHidden()
-                    .onChange(of: kind) { _, newKind in
-                        applyDefaults(for: newKind)
-                    }
-                }
-                GridRow {
                     Text("Host")
-                    TextField(kind == .glkvm ? "kvm.local" : "nanokvm.local", text: $host)
+                    TextField(kvmType == .comet ? "kvm.local" : "nanokvm.local", text: $host)
                         .textFieldStyle(.roundedBorder)
                 }
                 GridRow {
@@ -100,7 +105,7 @@ public struct DeviceEditorView: View {
                     TextField("admin", text: $username)
                         .textFieldStyle(.roundedBorder)
                 }
-                if kind == .glkvm {
+                if kvmType == .comet {
                     GridRow {
                         Text("TLS")
                         Toggle("Allow self-signed TLS", isOn: $allowsInsecureTLS)
@@ -169,7 +174,7 @@ public struct DeviceEditorView: View {
                 port: resolvedPort,
                 scheme: scheme,
                 username: trimmedUsername,
-                kind: kind,
+                kvmType: kvmType,
                 allowsInsecureTLS: allowsInsecureTLS
             )
         case .edit(let existing):
@@ -180,15 +185,16 @@ public struct DeviceEditorView: View {
                 port: resolvedPort,
                 scheme: scheme,
                 username: trimmedUsername,
-                kind: kind,
-                allowsInsecureTLS: allowsInsecureTLS
+                kvmType: kvmType,
+                allowsInsecureTLS: allowsInsecureTLS,
+                lastConnectedAt: existing.lastConnectedAt
             )
         }
     }
 
-    private func applyDefaults(for kind: Device.Kind) {
-        switch kind {
-        case .nanoKVM:
+    private func applyDefaults(for type: Device.KVMType) {
+        switch type {
+        case .nanoKVMLite, .nanoKVMUSB:
             if host == "kvm.local" || host.isEmpty {
                 host = "nanokvm.local"
             }
@@ -197,7 +203,7 @@ public struct DeviceEditorView: View {
                 port = "80"
             }
             allowsInsecureTLS = false
-        case .glkvm:
+        case .comet:
             if host == "nanokvm.local" || host.isEmpty {
                 host = "kvm.local"
             }
@@ -206,6 +212,8 @@ public struct DeviceEditorView: View {
                 port = "443"
             }
             allowsInsecureTLS = true
+        case .appleRFB:
+            allowsInsecureTLS = false
         }
     }
 }

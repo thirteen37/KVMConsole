@@ -44,6 +44,12 @@ public final class SavedDevicesStore: ObservableObject {
         persist()
     }
 
+    public func markConnected(_ id: Device.ID) {
+        guard let index = devices.firstIndex(where: { $0.id == id }) else { return }
+        devices[index].lastConnectedAt = Date()
+        persist()
+    }
+
     public func delete(_ device: Device) {
         guard let index = devices.firstIndex(where: { $0.id == device.id }) else { return }
         devices.remove(at: index)
