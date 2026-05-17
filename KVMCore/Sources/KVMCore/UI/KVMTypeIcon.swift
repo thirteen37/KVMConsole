@@ -10,18 +10,19 @@ public struct KVMTypeIcon: View {
     }
 
     public var body: some View {
+        image
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .foregroundStyle(.tint)
+    }
+
+    private var image: Image {
         switch type.iconSource {
         case .systemSymbol(let name):
-            Image(systemName: name)
-                .resizable()
-                .scaledToFit()
-                .frame(width: size, height: size)
-                .foregroundStyle(.tint)
+            return Image(systemName: name)
         case .bundledAsset(let name):
-            Image(name, bundle: .module)
-                .resizable()
-                .scaledToFit()
-                .frame(width: size, height: size)
+            return Image(name, bundle: .module).renderingMode(.template)
         }
     }
 }
