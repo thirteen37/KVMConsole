@@ -11,6 +11,14 @@ public final class SampleBufferDisplay {
         layer = AVSampleBufferDisplayLayer()
         layer.videoGravity = .resizeAspect
         layer.backgroundColor = CGColor(gray: 0, alpha: 1)
+        layer.masksToBounds = true
+    }
+
+    public func setVideoTransform(_ transform: CGAffineTransform) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer.setAffineTransform(transform)
+        CATransaction.commit()
     }
 
     public func enqueue(_ sampleBuffer: CMSampleBuffer) {

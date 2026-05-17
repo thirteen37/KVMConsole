@@ -68,13 +68,19 @@ struct ViewerView: View {
         ZStack {
             Color.black
 
-            VideoRenderView(renderCoordinator: model.renderCoordinator)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            VideoRenderView(
+                renderCoordinator: model.renderCoordinator,
+                scale: model.zoom.scale,
+                center: model.zoom.center,
+                videoSize: model.videoSize
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             PointerCaptureView(
                 isEnabled: model.isStreaming && model.isMouseCaptureEnabled,
                 isScrollInverted: model.isScrollInverted,
                 videoSize: model.videoSize,
+                zoom: model.zoom,
                 onMouseReport: { report in model.sendMouseReport(report) }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -89,6 +95,11 @@ struct ViewerView: View {
             )
             .frame(width: 1, height: 1)
             .accessibilityHidden(true)
+
+            MinimapView(zoom: model.zoom)
+                .padding(12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .allowsHitTesting(false)
         }
     }
 

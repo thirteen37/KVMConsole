@@ -6,6 +6,7 @@ struct PointerCaptureView: UIViewRepresentable {
     let isEnabled: Bool
     let isScrollInverted: Bool
     let videoSize: CGSize?
+    let zoom: ViewerZoomState
     let onMouseReport: @MainActor (HIDMouseAbsoluteReport) -> Void
 
     func makeUIView(context: Context) -> PointerCaptureUIView {
@@ -14,6 +15,7 @@ struct PointerCaptureView: UIViewRepresentable {
         view.isCaptureEnabled = isEnabled
         view.isScrollInverted = isScrollInverted
         view.videoSize = videoSize
+        view.zoom = zoom
         return view
     }
 
@@ -22,10 +24,11 @@ struct PointerCaptureView: UIViewRepresentable {
         uiView.isCaptureEnabled = isEnabled
         uiView.isScrollInverted = isScrollInverted
         uiView.videoSize = videoSize
+        uiView.zoom = zoom
     }
 }
 
-final class PointerCaptureUIView: UIView {
+final class PointerCaptureUIView: UIView, UIGestureRecognizerDelegate {
     var isCaptureEnabled = false {
         didSet {
             if !isCaptureEnabled {
@@ -35,11 +38,15 @@ final class PointerCaptureUIView: UIView {
     }
     var isScrollInverted = true
     var videoSize: CGSize?
+    var zoom: ViewerZoomState?
     var onMouseReport: (@MainActor (HIDMouseAbsoluteReport) -> Void)?
 
     private let mouseReportBuilder = HIDMouseAbsoluteReportBuilder()
     private var scrollAccumulator = MouseScrollAccumulator()
     private var activeDragButtonNumber: Int?
+    private weak var pinchRecognizer: UIPinchGestureRecognizer?
+    private weak var pointerPanRecognizer: UIPanGestureRecognizer?
+    private var pinchAnchorVideo: CGPoint?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -51,7 +58,15 @@ final class PointerCaptureUIView: UIView {
 
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
         pan.allowedScrollTypesMask = [.continuous, .discrete]
+        pan.maximumNumberOfTouches = 2
+        pan.delegate = self
         addGestureRecognizer(pan)
+        pointerPanRecognizer = pan
+
+        let pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        pinch.delegate = self
+        addGestureRecognizer(pinch)
+        pinchRecognizer = pinch
 
         let primaryTap = UITapGestureRecognizer(target: self, action: #selector(handlePrimaryTap(_:)))
         primaryTap.buttonMaskRequired = .primary
@@ -68,8 +83,13 @@ final class PointerCaptureUIView: UIView {
 
     @objc private func handleHover(_ recognizer: UIHoverGestureRecognizer) {
         guard isCaptureEnabled else { return }
-        let point = absolutePoint(for: recognizer.location(in: self))
-        emit(mouseReportBuilder.move(x: point.x, y: point.y))
+        let location = recognizer.location(in: self)
+        let effective = effectiveRect()
+        let normalized = MouseCoordinateMapper.normalizedPoint(clientPoint: location, effectiveRect: effective)
+        let absolute = MouseCoordinateMapper.absolutePoint(clientPoint: location, effectiveRect: effective)
+        emit(mouseReportBuilder.move(x: absolute.x, y: absolute.y))
+        zoom?.cursorNormalized = normalized
+        zoom?.ensureCursorVisible(cursorNormalized: normalized)
     }
 
     @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
@@ -78,7 +98,9 @@ final class PointerCaptureUIView: UIView {
             return
         }
         let location = recognizer.location(in: self)
-        let point = absolutePoint(for: location)
+        let effective = effectiveRect()
+        let normalized = MouseCoordinateMapper.normalizedPoint(clientPoint: location, effectiveRect: effective)
+        let point = MouseCoordinateMapper.absolutePoint(clientPoint: location, effectiveRect: effective)
         let dragButtonNumber = activeDragButtonNumber
             ?? PointerDragButtonResolver.buttonNumber(
                 buttonMask: recognizer.buttonMask,
@@ -110,6 +132,13 @@ final class PointerCaptureUIView: UIView {
             break
         }
 
+        if recognizer.state == .changed || recognizer.state == .began {
+            zoom?.cursorNormalized = normalized
+            if activeDragButtonNumber != nil || dragButtonNumber != nil {
+                zoom?.ensureCursorVisible(cursorNormalized: normalized)
+            }
+        }
+
         guard activeDragButtonNumber == nil, dragButtonNumber == nil else {
             recognizer.setTranslation(.zero, in: self)
             return
@@ -118,6 +147,11 @@ final class PointerCaptureUIView: UIView {
         // Trackpad scroll input reports `numberOfTouches == 0`; two-or-more direct
         // touches are routed to wheel scrolling. One-finger pans move or drag the pointer.
         guard PointerScrollResolver.shouldEmitWheel(touchCount: recognizer.numberOfTouches) else {
+            recognizer.setTranslation(.zero, in: self)
+            return
+        }
+        // While a pinch is in flight, suppress wheel emission — the two fingers are zooming.
+        if let pinch = pinchRecognizer, pinch.state == .began || pinch.state == .changed {
             recognizer.setTranslation(.zero, in: self)
             return
         }
@@ -134,6 +168,42 @@ final class PointerCaptureUIView: UIView {
         }
     }
 
+    @objc private func handlePinch(_ recognizer: UIPinchGestureRecognizer) {
+        guard let zoom else { return }
+        let centroid = recognizer.location(in: self)
+        let baseRect = MouseCoordinateMapper.aspectFitRect(for: videoSize, in: bounds)
+        guard baseRect.width > 0, baseRect.height > 0 else {
+            recognizer.scale = 1
+            return
+        }
+        switch recognizer.state {
+        case .began:
+            // Anchor the video point currently under the centroid for the rest of the gesture so
+            // the fingers grip that point: subsequent spreads scale around it AND translations of
+            // the centroid pan it to follow the fingers.
+            pinchAnchorVideo = CGPoint(
+                x: zoom.center.x + (centroid.x - bounds.midX) / (baseRect.width * zoom.scale),
+                y: zoom.center.y + (centroid.y - bounds.midY) / (baseRect.height * zoom.scale)
+            )
+            recognizer.scale = 1
+        case .changed:
+            guard let anchor = pinchAnchorVideo else { return }
+            let factor = recognizer.scale
+            recognizer.scale = 1
+            zoom.applyPinchPan(
+                factor: factor,
+                anchorVideo: anchor,
+                centroidInContainer: centroid,
+                containerBounds: bounds,
+                baseRect: baseRect
+            )
+        case .ended, .cancelled, .failed:
+            pinchAnchorVideo = nil
+        default:
+            break
+        }
+    }
+
     @objc private func handlePrimaryTap(_ recognizer: UITapGestureRecognizer) {
         emitClick(buttonNumber: 0, at: recognizer.location(in: self))
     }
@@ -144,9 +214,12 @@ final class PointerCaptureUIView: UIView {
 
     private func emitClick(buttonNumber: Int, at location: CGPoint) {
         guard isCaptureEnabled else { return }
-        let point = absolutePoint(for: location)
+        let effective = effectiveRect()
+        let normalized = MouseCoordinateMapper.normalizedPoint(clientPoint: location, effectiveRect: effective)
+        let point = MouseCoordinateMapper.absolutePoint(clientPoint: location, effectiveRect: effective)
         emit(mouseReportBuilder.buttonDown(buttonNumber: buttonNumber, x: point.x, y: point.y))
         emit(mouseReportBuilder.buttonUp(buttonNumber: buttonNumber, x: point.x, y: point.y))
+        zoom?.cursorNormalized = normalized
     }
 
     private func releaseActiveDragIfNeeded() {
@@ -162,8 +235,21 @@ final class PointerCaptureUIView: UIView {
         }
     }
 
-    private func absolutePoint(for point: CGPoint) -> (x: UInt16, y: UInt16) {
-        MouseCoordinateMapper.absolutePoint(clientPoint: point, bounds: bounds, videoSize: videoSize)
+    private func effectiveRect() -> CGRect {
+        let baseRect = MouseCoordinateMapper.aspectFitRect(for: videoSize, in: bounds)
+        guard let zoom else { return baseRect }
+        return zoom.effectiveVideoRect(in: bounds, baseRect: baseRect)
+    }
+
+    // MARK: UIGestureRecognizerDelegate
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+    ) -> Bool {
+        // Pinch should coexist with the pointer pan so two-finger zoom/pan doesn't fail-cancel
+        // the pan's wheel-scroll tracking (we suppress wheel emission while pinch is active).
+        return true
     }
 }
 

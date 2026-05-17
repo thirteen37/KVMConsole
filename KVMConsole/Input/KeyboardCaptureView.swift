@@ -7,6 +7,7 @@ struct KeyboardCaptureView: NSViewRepresentable {
     let isMouseEnabled: Bool
     let isScrollInverted: Bool
     let videoSize: CGSize?
+    let zoom: ViewerZoomState
     let onKeyboardReport: @MainActor (HIDKeyboardReport) -> Void
     let onMouseReport: @MainActor (HIDMouseAbsoluteReport) -> Void
 
@@ -18,6 +19,7 @@ struct KeyboardCaptureView: NSViewRepresentable {
         view.setMouseEnabled(isMouseEnabled)
         view.isScrollInverted = isScrollInverted
         view.videoSize = videoSize
+        view.zoom = zoom
         return view
     }
 
@@ -28,6 +30,7 @@ struct KeyboardCaptureView: NSViewRepresentable {
         nsView.setMouseEnabled(isMouseEnabled)
         nsView.isScrollInverted = isScrollInverted
         nsView.videoSize = videoSize
+        nsView.zoom = zoom
     }
 }
 
@@ -36,6 +39,7 @@ final class CaptureNSView: NSView {
     private(set) var isMouseEnabled = false
     var isScrollInverted = true
     var videoSize: CGSize?
+    var zoom: ViewerZoomState?
     var onKeyboardReport: (@MainActor (HIDKeyboardReport) -> Void)?
     var onMouseReport: (@MainActor (HIDMouseAbsoluteReport) -> Void)?
     private let keyboardReportBuilder = HIDKeyboardReportBuilder()
@@ -203,6 +207,21 @@ final class CaptureNSView: NSView {
         emit(mouseReportBuilder.wheel(wheelDelta, x: point.x, y: point.y))
     }
 
+    override func magnify(with event: NSEvent) {
+        guard let zoom else {
+            super.magnify(with: event)
+            return
+        }
+        let factor = 1 + event.magnification
+        guard factor > 0 else { return }
+        let location = convert(event.locationInWindow, from: nil)
+        let anchor = MouseCoordinateMapper.normalizedPoint(
+            clientPoint: location,
+            effectiveRect: effectiveRect()
+        )
+        zoom.applyPinch(factor: factor, anchorNormalized: anchor)
+    }
+
     override func keyDown(with event: NSEvent) {
         guard isKeyboardEnabled, !event.isARepeat, let usage = HIDKeymap.usage(for: event.keyCode) else {
             return
@@ -247,12 +266,26 @@ final class CaptureNSView: NSView {
 
     private func emitMove(for event: NSEvent) {
         guard isMouseEnabled else { return }
-        let point = absolutePoint(for: event)
-        emit(mouseReportBuilder.move(x: point.x, y: point.y))
+        let point = convert(event.locationInWindow, from: nil)
+        let effective = effectiveRect()
+        let normalized = MouseCoordinateMapper.normalizedPoint(clientPoint: point, effectiveRect: effective)
+        let absolute = MouseCoordinateMapper.absolutePoint(clientPoint: point, effectiveRect: effective)
+        emit(mouseReportBuilder.move(x: absolute.x, y: absolute.y))
+        zoom?.cursorNormalized = normalized
+        zoom?.ensureCursorVisible(cursorNormalized: normalized)
     }
 
     private func absolutePoint(for event: NSEvent) -> (x: UInt16, y: UInt16) {
         let point = convert(event.locationInWindow, from: nil)
-        return MouseCoordinateMapper.absolutePoint(clientPoint: point, bounds: bounds, videoSize: videoSize)
+        let effective = effectiveRect()
+        let normalized = MouseCoordinateMapper.normalizedPoint(clientPoint: point, effectiveRect: effective)
+        zoom?.cursorNormalized = normalized
+        return MouseCoordinateMapper.absolutePoint(clientPoint: point, effectiveRect: effective)
+    }
+
+    private func effectiveRect() -> CGRect {
+        let baseRect = MouseCoordinateMapper.aspectFitRect(for: videoSize, in: bounds)
+        guard let zoom else { return baseRect }
+        return zoom.effectiveVideoRect(in: bounds, baseRect: baseRect)
     }
 }

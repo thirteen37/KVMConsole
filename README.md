@@ -14,6 +14,7 @@ I started this after using NanoKVM to drive my spare Mac in the closet for AI-ag
 - Full keyboard capture, including shortcuts such as Cmd-W that browsers normally intercept
 - More reliable scrolling and absolute-positioning mouse input over the device's HID WebSocket
 - iPadOS support with better hardware keyboard, modifier-key, pointer, and scrolling behavior
+- Pinch-to-zoom on the remote video with a bottom-right minimap; pinching also pans (the grabbed video point follows the fingers), and the viewport follows the remote cursor toward the edges when zoomed in
 - macOS fullscreen viewer with triple-Escape to exit
 - Connection heartbeat with automatic state surfacing in the UI
 

@@ -83,18 +83,29 @@ struct ViewerView: View {
         ZStack {
             Color.black
 
-            VideoRenderView(renderCoordinator: model.renderCoordinator)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            VideoRenderView(
+                renderCoordinator: model.renderCoordinator,
+                scale: model.zoom.scale,
+                center: model.zoom.center,
+                videoSize: model.videoSize
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             KeyboardCaptureView(
                 isKeyboardEnabled: model.isStreaming && model.isKeyboardCaptureEnabled && !model.isFullscreen,
                 isMouseEnabled: model.isStreaming && model.isMouseCaptureEnabled,
                 isScrollInverted: model.isScrollInverted,
                 videoSize: model.videoSize,
+                zoom: model.zoom,
                 onKeyboardReport: { report in model.sendKeyboardReport(report) },
                 onMouseReport: { report in model.sendMouseReport(report) }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            MinimapView(zoom: model.zoom)
+                .padding(12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .allowsHitTesting(false)
         }
     }
 
