@@ -61,10 +61,9 @@ public struct DeviceEditorView: View {
                     Text("Type")
                     Picker("Type", selection: $kvmType) {
                         ForEach(Device.KVMType.allCases, id: \.self) { type in
-                            Label {
+                            HStack(spacing: 6) {
+                                KVMTypeIcon(type)
                                 Text(type.displayName)
-                            } icon: {
-                                KVMTypeIcon(type, size: 16)
                             }
                             .tag(type)
                         }

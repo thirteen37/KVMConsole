@@ -2,18 +2,22 @@ import SwiftUI
 
 public struct KVMTypeIcon: View {
     private let type: Device.KVMType
-    private let size: CGFloat
+    private let explicitSize: CGFloat?
 
-    public init(_ type: Device.KVMType, size: CGFloat) {
+    // Tracks the body text size so the icon stays at text height across Dynamic Type / platforms.
+    @ScaledMetric(relativeTo: .body) private var textHeightSize: CGFloat = 16
+
+    public init(_ type: Device.KVMType, size: CGFloat? = nil) {
         self.type = type
-        self.size = size
+        self.explicitSize = size
     }
 
     public var body: some View {
+        let side = explicitSize ?? textHeightSize
         image
             .resizable()
             .scaledToFit()
-            .frame(width: size, height: size)
+            .frame(width: side, height: side)
             .foregroundStyle(.tint)
     }
 
