@@ -60,6 +60,10 @@ final class SampleBufferDisplayView: NSView {
     override func layout() {
         super.layout()
         layer?.frame = bounds
+        // Setting `.frame` while an affine transform is non-identity is documented as undefined
+        // (Core Animation back-solves bounds against the transform). Reset to identity, then
+        // size the layer, then reapply the zoom transform.
+        display.setVideoTransform(.identity)
         display.layer.frame = bounds
         refreshTransform()
     }
