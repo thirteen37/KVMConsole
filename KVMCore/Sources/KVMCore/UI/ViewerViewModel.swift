@@ -61,10 +61,6 @@ public final class ViewerViewModel: ObservableObject {
         attemptAutoConnect()
     }
 
-    deinit {
-        KVMLog.glkvm.info("Viewer model deinit")
-    }
-
     public var isStreaming: Bool { session.isStreaming }
     public var powerControl: KVMPowerControl? { session.powerControl }
 

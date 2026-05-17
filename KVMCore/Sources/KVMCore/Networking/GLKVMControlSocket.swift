@@ -72,7 +72,6 @@ public actor GLKVMControlSocket {
     public func sendKeyboardReport(_ report: HIDKeyboardReport) async {
         guard let task else { return }
         for event in Self.keyboardEvents(from: lastKeyboardReport, to: report) {
-            KVMLog.glkvm.info("Sending GLKVM keyboard event: \(Self.eventLogDescription(event), privacy: .public)")
             try? await task.send(.data(Self.encodeBinary(event)))
         }
         lastKeyboardReport = report
@@ -87,13 +86,11 @@ public actor GLKVMControlSocket {
         try? await task.send(.data(Self.encodeBinary(move)))
 
         for event in Self.mouseButtonEvents(from: lastMouseButtons, to: report.buttons) {
-            KVMLog.glkvm.info("Sending GLKVM mouse button event: \(Self.eventLogDescription(event), privacy: .public)")
             try? await task.send(.data(Self.encodeBinary(event)))
         }
         lastMouseButtons = report.buttons
 
         if report.wheel != 0 {
-            KVMLog.glkvm.info("Sending GLKVM mouse wheel event: y=\(Int(report.wheel), privacy: .public)")
             try? await task.send(.data(Self.encodeBinary(.mouseWheel(x: 0, y: Int(report.wheel)))))
         }
     }
@@ -262,21 +259,6 @@ public actor GLKVMControlSocket {
         }
         components.path = "/api/ws"
         return components.url
-    }
-
-    private nonisolated static func eventLogDescription(_ event: GLKVMOutboundEvent) -> String {
-        switch event {
-        case .key(let code, let isPressed):
-            return "\(code) \(isPressed ? "down" : "up")"
-        case .mouseMove(let x, let y):
-            return "move \(x),\(y)"
-        case .mouseButton(let button, let isPressed):
-            return "\(button) \(isPressed ? "down" : "up")"
-        case .mouseWheel(let x, let y):
-            return "wheel \(x),\(y)"
-        case .ping:
-            return "ping"
-        }
     }
 
     private nonisolated static func streamerStateDescription(_ event: [String: Any]) -> String {

@@ -260,5 +260,6 @@ struct ViewerView: View {
         toolbarHideTask?.cancel()
         toolbarHideTask = nil
         model.clearFullscreenBanner()
+        model.disconnect()
     }
 }
