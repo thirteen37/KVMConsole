@@ -21,10 +21,6 @@ public enum H264DecoderError: Error, LocalizedError {
     }
 }
 
-private struct SendableSampleBuffer: @unchecked Sendable {
-    let value: CMSampleBuffer
-}
-
 private let invalidParameterStatus = OSStatus(-50)
 
 public final class H264Decoder: @unchecked Sendable {
@@ -32,9 +28,9 @@ public final class H264Decoder: @unchecked Sendable {
     private var pps: Data?
     private var formatDescription: CMVideoFormatDescription?
     private var decompressionSession: VTDecompressionSession?
-    private let output: @MainActor (CMSampleBuffer) -> Void
+    private let output: @Sendable (CMSampleBuffer) -> Void
 
-    public init(output: @escaping @MainActor (CMSampleBuffer) -> Void) {
+    public init(output: @escaping @Sendable (CMSampleBuffer) -> Void) {
         self.output = output
     }
 
@@ -144,6 +140,12 @@ public final class H264Decoder: @unchecked Sendable {
         guard sessionStatus == noErr, let newSession else {
             throw H264DecoderError.decompressionSession(sessionStatus)
         }
+        VTSessionSetProperty(newSession, key: kVTDecompressionPropertyKey_RealTime, value: kCFBooleanTrue)
+
+        var threadCountValue: Int32 = 1
+        if let threadCount = CFNumberCreate(kCFAllocatorDefault, .sInt32Type, &threadCountValue) {
+            VTSessionSetProperty(newSession, key: kVTDecompressionPropertyKey_ThreadCount, value: threadCount)
+        }
 
         formatDescription = newFormatDescription
         decompressionSession = newSession
@@ -236,10 +238,23 @@ public final class H264Decoder: @unchecked Sendable {
         )
         guard sampleStatus == noErr, let decodedSampleBuffer else { return }
 
-        let boxed = SendableSampleBuffer(value: decodedSampleBuffer)
-        Task { @MainActor [output, boxed] in
-            output(boxed.value)
-        }
+        markDisplayImmediately(decodedSampleBuffer)
+        output(decodedSampleBuffer)
+    }
+
+    private func markDisplayImmediately(_ sampleBuffer: CMSampleBuffer) {
+        guard
+            let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: true),
+            CFArrayGetCount(attachments) > 0,
+            let attachment = CFArrayGetValueAtIndex(attachments, 0)
+        else { return }
+
+        let attachmentDictionary = unsafeBitCast(attachment, to: CFMutableDictionary.self)
+        CFDictionarySetValue(
+            attachmentDictionary,
+            Unmanaged.passUnretained(kCMSampleAttachmentKey_DisplayImmediately).toOpaque(),
+            Unmanaged.passUnretained(kCFBooleanTrue).toOpaque()
+        )
     }
 }
 

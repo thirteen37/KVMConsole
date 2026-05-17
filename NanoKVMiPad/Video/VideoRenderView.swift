@@ -1,29 +1,33 @@
-@preconcurrency import CoreMedia
 import NanoKVMCore
 import SwiftUI
 
 struct VideoRenderView: UIViewRepresentable {
-    let sampleBuffer: CMSampleBuffer?
-    let flushToken: Int
+    let renderCoordinator: SampleBufferRenderCoordinator
 
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(renderCoordinator: renderCoordinator)
     }
 
     func makeUIView(context: Context) -> SampleBufferDisplayUIView {
-        SampleBufferDisplayUIView()
+        let view = SampleBufferDisplayUIView()
+        context.coordinator.renderCoordinator.attach(display: view.display)
+        return view
     }
 
     func updateUIView(_ uiView: SampleBufferDisplayUIView, context: Context) {
-        context.coordinator.render.update(
-            sampleBuffer: sampleBuffer,
-            flushToken: flushToken,
-            display: uiView.display
-        )
+        context.coordinator.renderCoordinator.attach(display: uiView.display)
+    }
+
+    static func dismantleUIView(_ uiView: SampleBufferDisplayUIView, coordinator: Coordinator) {
+        coordinator.renderCoordinator.detach(display: uiView.display)
     }
 
     final class Coordinator {
-        let render = SampleBufferRenderCoordinator()
+        let renderCoordinator: SampleBufferRenderCoordinator
+
+        init(renderCoordinator: SampleBufferRenderCoordinator) {
+            self.renderCoordinator = renderCoordinator
+        }
     }
 }
 

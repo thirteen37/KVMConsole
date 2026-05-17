@@ -69,7 +69,7 @@ public final class H264StreamSocket: @unchecked Sendable {
         let webSocketTask = session.webSocketTask(with: request)
         task = webSocketTask
 
-        return AsyncThrowingStream(bufferingPolicy: .bufferingNewest(10)) { continuation in
+        return AsyncThrowingStream(bufferingPolicy: .bufferingNewest(2)) { continuation in
             webSocketTask.resume()
             let receiveTask = Task {
                 do {

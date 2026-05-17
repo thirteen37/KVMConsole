@@ -38,6 +38,7 @@ public actor ControlSocket {
         request.setValue("nano-kvm-token=\(token)", forHTTPHeaderField: "Cookie")
 
         let webSocketTask = session.webSocketTask(with: request)
+        webSocketTask.priority = URLSessionTask.highPriority
         task = webSocketTask
         webSocketTask.resume()
 
