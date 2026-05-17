@@ -16,6 +16,7 @@ public struct DeviceEditorView: View {
     @State private var scheme: Device.Scheme
     @State private var username: String
     @State private var password: String
+    @State private var kvmType: Device.KVMType
     @State private var showPassword: Bool = false
 
     init(
@@ -36,6 +37,7 @@ public struct DeviceEditorView: View {
             _scheme = State(initialValue: .http)
             _username = State(initialValue: "admin")
             _password = State(initialValue: "")
+            _kvmType = State(initialValue: .nanoKVMUSB)
         case .edit(let device):
             _name = State(initialValue: device.name)
             _host = State(initialValue: device.host)
@@ -43,6 +45,7 @@ public struct DeviceEditorView: View {
             _scheme = State(initialValue: device.scheme)
             _username = State(initialValue: device.username)
             _password = State(initialValue: savedPassword ?? "")
+            _kvmType = State(initialValue: device.kvmType)
         }
     }
 
@@ -51,6 +54,20 @@ public struct DeviceEditorView: View {
             Text(title).font(.headline)
 
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 8) {
+                GridRow {
+                    Text("Type")
+                    Picker("Type", selection: $kvmType) {
+                        ForEach(Device.KVMType.allCases, id: \.self) { type in
+                            Label {
+                                Text(type.displayName)
+                            } icon: {
+                                KVMTypeIcon(type, size: 16)
+                            }
+                            .tag(type)
+                        }
+                    }
+                    .labelsHidden()
+                }
                 GridRow {
                     Text("Name")
                     TextField("My NanoKVM", text: $name)
@@ -144,7 +161,8 @@ public struct DeviceEditorView: View {
                 host: trimmedHost,
                 port: resolvedPort,
                 scheme: scheme,
-                username: trimmedUsername
+                username: trimmedUsername,
+                kvmType: kvmType
             )
         case .edit(let existing):
             return Device(
@@ -153,7 +171,9 @@ public struct DeviceEditorView: View {
                 host: trimmedHost,
                 port: resolvedPort,
                 scheme: scheme,
-                username: trimmedUsername
+                username: trimmedUsername,
+                kvmType: kvmType,
+                lastConnectedAt: existing.lastConnectedAt
             )
         }
     }

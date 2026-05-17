@@ -7,8 +7,11 @@ struct NanoKVMApp: App {
 
     var body: some Scene {
         Window("NanoKVM Connections", id: "connections") {
-            ConnectionManagerView()
-                .environmentObject(devicesStore)
+            NavigationStack {
+                ConnectionManagerView()
+            }
+            .frame(minWidth: 560, minHeight: 360)
+            .environmentObject(devicesStore)
         }
         .windowResizability(.contentSize)
 

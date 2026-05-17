@@ -9,8 +9,11 @@ struct ViewerHostView: View {
     var body: some View {
         Group {
             if let deviceID, let device = devicesStore.device(id: deviceID) {
-                ViewerView(device: device)
+                ViewerView(device: device) { id in
+                    devicesStore.markConnected(id)
+                }
                     .navigationTitle(device.name)
+                    .navigationSubtitle(device.host)
             } else {
                 missingDevice
             }
@@ -39,8 +42,8 @@ struct ViewerView: View {
 
     private static let toolbarHideDelayNs: UInt64 = 2_000_000_000
 
-    init(device: Device) {
-        _model = StateObject(wrappedValue: ViewerViewModel(device: device))
+    init(device: Device, onConnected: ((Device.ID) -> Void)? = nil) {
+        _model = StateObject(wrappedValue: ViewerViewModel(device: device, onConnected: onConnected))
     }
 
     var body: some View {
@@ -107,34 +110,53 @@ struct ViewerView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
-            Toggle("Keyboard", isOn: $model.isKeyboardCaptureEnabled)
-                .toggleStyle(.checkbox)
-                .padding(.trailing, 8)
-        }
-        ToolbarItem(placement: .primaryAction) {
-            Toggle("Mouse", isOn: $model.isMouseCaptureEnabled)
-                .toggleStyle(.checkbox)
-                .padding(.trailing, 8)
-        }
-        ToolbarItem(placement: .primaryAction) {
-            Toggle("Invert Scroll", isOn: $model.isScrollInverted)
-                .toggleStyle(.checkbox)
-                .padding(.trailing, 8)
-        }
-        ToolbarItem(placement: .primaryAction) {
-            Text(model.status)
-                .foregroundStyle(statusColor)
-                .padding(.horizontal, 4)
-        }
-        ToolbarItem(placement: .primaryAction) {
-            Button(model.isStreaming ? "Disconnect" : "Reconnect") {
+        ToolbarItemGroup(placement: .primaryAction) {
+            Toggle(isOn: $model.isKeyboardCaptureEnabled) {
+                Label("Keyboard", systemImage: "keyboard")
+            }
+            .toggleStyle(.button)
+            .labelStyle(.iconOnly)
+            .help("Keyboard capture")
+
+            Toggle(isOn: $model.isMouseCaptureEnabled) {
+                Label("Mouse", systemImage: "cursorarrow")
+            }
+            .toggleStyle(.button)
+            .labelStyle(.iconOnly)
+            .help("Mouse capture")
+
+            Toggle(isOn: $model.isScrollInverted) {
+                Label("Invert Scroll", systemImage: "arrow.up.arrow.down")
+            }
+            .toggleStyle(.button)
+            .labelStyle(.iconOnly)
+            .help("Invert scroll")
+
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 8, height: 8)
+                Text(model.status)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(minWidth: 92, alignment: .leading)
+            }
+
+            Button {
                 if model.isStreaming {
                     model.disconnect()
                 } else {
                     model.reconnect()
                 }
+            } label: {
+                Label(
+                    model.isStreaming ? "Disconnect" : "Reconnect",
+                    systemImage: model.isStreaming ? "xmark.circle" : "arrow.clockwise"
+                )
+                .frame(minWidth: 92, alignment: .leading)
             }
+            .labelStyle(.titleAndIcon)
+            .controlSize(.small)
         }
     }
 
