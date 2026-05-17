@@ -94,17 +94,31 @@ public enum MouseCoordinateMapper {
             return (1, 1)
         }
 
-        let mediaRect = aspectFitRect(for: videoSize, in: bounds)
-        let normalizedX = clamp((clientPoint.x - mediaRect.minX) / mediaRect.width)
-        let normalizedY = clamp((clientPoint.y - mediaRect.minY) / mediaRect.height)
-
-        return (
-            UInt16(floor(32_767 * normalizedX) + 1),
-            UInt16(floor(32_767 * normalizedY) + 1)
+        return absolutePoint(
+            clientPoint: clientPoint,
+            effectiveRect: aspectFitRect(for: videoSize, in: bounds)
         )
     }
 
-    private static func aspectFitRect(for videoSize: CGSize?, in bounds: CGRect) -> CGRect {
+    public static func absolutePoint(clientPoint: CGPoint, effectiveRect: CGRect) -> (x: UInt16, y: UInt16) {
+        let normalized = normalizedPoint(clientPoint: clientPoint, effectiveRect: effectiveRect)
+        return (
+            UInt16(floor(32_767 * normalized.x) + 1),
+            UInt16(floor(32_767 * normalized.y) + 1)
+        )
+    }
+
+    public static func normalizedPoint(clientPoint: CGPoint, effectiveRect: CGRect) -> CGPoint {
+        guard effectiveRect.width > 0, effectiveRect.height > 0 else {
+            return .zero
+        }
+        return CGPoint(
+            x: clamp((clientPoint.x - effectiveRect.minX) / effectiveRect.width),
+            y: clamp((clientPoint.y - effectiveRect.minY) / effectiveRect.height)
+        )
+    }
+
+    public static func aspectFitRect(for videoSize: CGSize?, in bounds: CGRect) -> CGRect {
         guard
             let videoSize,
             videoSize.width > 0,
