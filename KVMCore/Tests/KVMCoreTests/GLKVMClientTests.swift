@@ -47,7 +47,7 @@ final class GLKVMClientTests: XCTestCase {
 
         let request = try XCTUnwrap(session.sent.first)
         XCTAssertEqual(request.httpMethod, "POST")
-        XCTAssertEqual(request.url?.absoluteString, "https://kvm.local/api/streamer/set_params?video_format=0")
+        XCTAssertEqual(request.url?.absoluteString, "https://kvm.local/api/streamer/set_params?video_format=0&h264_gop=30")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Cookie"), "auth_token=token")
     }
 }

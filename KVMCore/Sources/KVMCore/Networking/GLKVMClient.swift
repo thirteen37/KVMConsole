@@ -88,6 +88,7 @@ public actor GLKVMClient: KVMPowerControl {
     public func setStreamerVideoFormatH264() async throws {
         try await postNoBody(path: "/api/streamer/set_params", queryItems: [
             URLQueryItem(name: "video_format", value: "0"),
+            URLQueryItem(name: "h264_gop", value: "30"),
         ])
     }
 

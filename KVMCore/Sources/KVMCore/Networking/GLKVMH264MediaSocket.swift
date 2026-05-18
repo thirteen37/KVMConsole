@@ -81,11 +81,12 @@ public final class GLKVMH264MediaSocket: @unchecked Sendable {
         webSocketTask.priority = URLSessionTask.highPriority
         task = webSocketTask
 
-        return AsyncThrowingStream(bufferingPolicy: .bufferingNewest(2)) { continuation in
+        return AsyncThrowingStream(bufferingPolicy: .bufferingNewest(8)) { continuation in
             webSocketTask.resume()
             startHeartbeat(task: webSocketTask)
 
             let receiveTask = Task { [weak self] in
+                var nextSequenceNumber: UInt64 = 0
                 do {
                     while !Task.isCancelled {
                         let message = try await webSocketTask.receive()
@@ -97,7 +98,13 @@ public final class GLKVMH264MediaSocket: @unchecked Sendable {
                             let timestamp = DispatchTime.now().uptimeNanoseconds / 1_000
                             if let frame = try GLKVMDirectH264FrameParser.parse(data, timestampMicros: timestamp) {
                                 self.logFirstFrameIfNeeded(frame)
-                                continuation.yield(frame)
+                                continuation.yield(H264StreamFrame(
+                                    isKeyFrame: frame.isKeyFrame,
+                                    timestampMicros: frame.timestampMicros,
+                                    payload: frame.payload,
+                                    sequenceNumber: nextSequenceNumber
+                                ))
+                                nextSequenceNumber &+= 1
                             }
                         @unknown default:
                             throw GLKVMH264MediaError.unsupportedMessage

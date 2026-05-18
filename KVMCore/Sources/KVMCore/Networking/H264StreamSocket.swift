@@ -20,11 +20,13 @@ public struct H264StreamFrame: Equatable, Sendable {
     public let isKeyFrame: Bool
     public let timestampMicros: UInt64
     public let payload: Data
+    public let sequenceNumber: UInt64
 
-    public init(isKeyFrame: Bool, timestampMicros: UInt64, payload: Data) {
+    public init(isKeyFrame: Bool, timestampMicros: UInt64, payload: Data, sequenceNumber: UInt64 = 0) {
         self.isKeyFrame = isKeyFrame
         self.timestampMicros = timestampMicros
         self.payload = payload
+        self.sequenceNumber = sequenceNumber
     }
 }
 
@@ -69,16 +71,24 @@ public final class H264StreamSocket: @unchecked Sendable {
         let webSocketTask = session.webSocketTask(with: request)
         task = webSocketTask
 
-        return AsyncThrowingStream(bufferingPolicy: .bufferingNewest(2)) { continuation in
+        return AsyncThrowingStream(bufferingPolicy: .bufferingNewest(8)) { continuation in
             webSocketTask.resume()
             let receiveTask = Task {
+                var nextSequenceNumber: UInt64 = 0
                 do {
                     while !Task.isCancelled {
                         let message = try await webSocketTask.receive()
                         switch message {
                         case .data(let data):
                             do {
-                                continuation.yield(try H264StreamFrameParser.parse(data))
+                                let frame = try H264StreamFrameParser.parse(data)
+                                continuation.yield(H264StreamFrame(
+                                    isKeyFrame: frame.isKeyFrame,
+                                    timestampMicros: frame.timestampMicros,
+                                    payload: frame.payload,
+                                    sequenceNumber: nextSequenceNumber
+                                ))
+                                nextSequenceNumber &+= 1
                             } catch H264StreamError.frameTooShort, H264StreamError.emptyPayload {
                                 continue
                             }
