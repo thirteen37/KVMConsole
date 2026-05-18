@@ -120,32 +120,55 @@ struct ViewerView: View {
             }
             .toggleStyle(.button)
             .labelStyle(.iconOnly)
-            .help("Keyboard capture")
+            .help(model.isKeyboardCaptureEnabled
+                  ? "Forwarding keyboard to host — click to stop"
+                  : "Keyboard forwarding off — click to enable")
 
             Toggle(isOn: $model.isMouseCaptureEnabled) {
                 Label("Mouse", systemImage: "cursorarrow")
             }
             .toggleStyle(.button)
             .labelStyle(.iconOnly)
-            .help("Mouse capture")
+            .help(model.isMouseCaptureEnabled
+                  ? "Forwarding mouse to host — click to stop"
+                  : "Mouse forwarding off — click to enable")
 
             Toggle(isOn: $model.isScrollInverted) {
                 Label("Invert Scroll", systemImage: "arrow.up.arrow.down")
             }
             .toggleStyle(.button)
             .labelStyle(.iconOnly)
-            .help("Invert scroll")
+            .help(model.isScrollInverted
+                  ? "Scroll direction inverted — click to use natural direction"
+                  : "Natural scroll direction — click to invert")
+        }
 
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 8, height: 8)
-                Text(model.state.displayText)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 92, alignment: .leading)
+        #if compiler(>=6.2)
+        if #available(macOS 26.0, *) {
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+        }
+        #endif
+
+        ToolbarItem(placement: .primaryAction) {
+            HStack(spacing: 14) {
+                if model.supportsHostStatus {
+                    HostStatusIndicators(
+                        status: model.hostStatus,
+                        isActive: model.state == .streaming
+                    )
+                }
+
+                HStack(spacing: 4) {
+                    Image(systemName: connectionSymbol)
+                        .foregroundStyle(statusColor)
+                    Text(model.state.displayText)
+                        .font(.callout)
+                }
             }
+            .padding(.horizontal, 12)
+        }
 
+        ToolbarItemGroup(placement: .primaryAction) {
             if model.supportsPowerControl {
                 Menu {
                     Button("On") { model.powerOn() }
@@ -172,10 +195,13 @@ struct ViewerView: View {
                     model.isStreaming ? "Disconnect" : "Reconnect",
                     systemImage: model.isStreaming ? "xmark.circle" : "arrow.clockwise"
                 )
-                .frame(minWidth: 92, alignment: .leading)
+                .padding(.horizontal, 6)
             }
             .labelStyle(.titleAndIcon)
             .controlSize(.small)
+            .help(model.isStreaming
+                  ? "Disconnect from \(model.device.host)"
+                  : "Reconnect to \(model.device.host)")
         }
     }
 
@@ -221,6 +247,15 @@ struct ViewerView: View {
         case .error: return .red
         case .connecting: return .orange
         case .disconnected: return .secondary
+        }
+    }
+
+    private var connectionSymbol: String {
+        switch model.state {
+        case .streaming: return "antenna.radiowaves.left.and.right"
+        case .connecting: return "antenna.radiowaves.left.and.right"
+        case .disconnected: return "antenna.radiowaves.left.and.right.slash"
+        case .error: return "exclamationmark.triangle.fill"
         }
     }
 
