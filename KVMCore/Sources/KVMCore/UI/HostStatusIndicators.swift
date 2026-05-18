@@ -59,26 +59,26 @@ public struct HostStatusIndicators: View {
 
     private var hdmiSymbol: String {
         switch status?.hdmiSignal {
-        case true: return "display"
-        case false: return "display.trianglebadge.exclamationmark"
-        case nil: return "display"
+        case .some(true): return "display"
+        case .some(false): return "display.trianglebadge.exclamationmark"
+        case .none: return "display"
         }
     }
 
     private var hdmiStyle: AnyShapeStyle {
         guard isActive else { return AnyShapeStyle(HierarchicalShapeStyle.tertiary) }
         switch status?.hdmiSignal {
-        case true: return AnyShapeStyle(Color.green)
-        case false: return AnyShapeStyle(HierarchicalShapeStyle.secondary)
-        case nil: return AnyShapeStyle(HierarchicalShapeStyle.tertiary)
+        case .some(true): return AnyShapeStyle(Color.green)
+        case .some(false): return AnyShapeStyle(HierarchicalShapeStyle.secondary)
+        case .none: return AnyShapeStyle(HierarchicalShapeStyle.tertiary)
         }
     }
 
     private var hdmiTooltip: String {
         switch status?.hdmiSignal {
-        case true: return "HDMI: Signal detected"
-        case false: return "HDMI: No signal"
-        case nil: return "HDMI: Unknown"
+        case .some(true): return "HDMI: Signal detected"
+        case .some(false): return "HDMI: No signal"
+        case .none: return "HDMI: Unknown"
         }
     }
 }
