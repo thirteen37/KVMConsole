@@ -11,6 +11,7 @@ public struct H264NALUnit: Equatable, Sendable {
 
     public var isSPS: Bool { type == 7 }
     public var isPPS: Bool { type == 8 }
+    public var isIDR: Bool { type == 5 }
 }
 
 public enum H264AnnexBParser {

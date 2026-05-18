@@ -23,11 +23,41 @@ public enum H264DecoderError: Error, LocalizedError {
 
 private let invalidParameterStatus = OSStatus(-50)
 
+enum H264FrameContinuityAction: Equatable {
+    case decode
+    case decodeThroughDiscontinuity
+    case resetAndDecodeKeyframe
+}
+
+struct H264FrameContinuityGate {
+    private(set) var lastSequenceNumber: UInt64?
+
+    mutating func inspect(_ frame: H264StreamFrame, isKeyFrame: Bool) -> H264FrameContinuityAction {
+        let hasDiscontinuity = lastSequenceNumber.map { frame.sequenceNumber != $0 &+ 1 } ?? false
+        lastSequenceNumber = frame.sequenceNumber
+
+        guard hasDiscontinuity else {
+            return .decode
+        }
+
+        if isKeyFrame {
+            return .resetAndDecodeKeyframe
+        }
+
+        return .decodeThroughDiscontinuity
+    }
+
+    mutating func reset() {
+        lastSequenceNumber = nil
+    }
+}
+
 public final class H264Decoder: @unchecked Sendable {
     private var sps: Data?
     private var pps: Data?
     private var formatDescription: CMVideoFormatDescription?
     private var decompressionSession: VTDecompressionSession?
+    private var continuityGate = H264FrameContinuityGate()
     private let output: @Sendable (CMSampleBuffer) -> Void
 
     public init(output: @escaping @Sendable (CMSampleBuffer) -> Void) {
@@ -41,6 +71,21 @@ public final class H264Decoder: @unchecked Sendable {
     public func decode(_ frame: H264StreamFrame) throws {
         let units = H264AnnexBParser.parseNALUnits(from: frame.payload)
         guard !units.isEmpty else { return }
+
+        let isKeyFrame = frame.isKeyFrame || units.contains { $0.isIDR }
+        switch continuityGate.inspect(frame, isKeyFrame: isKeyFrame) {
+        case .decode:
+            break
+        case .resetAndDecodeKeyframe:
+            KVMLog.video.info(
+                "H.264 stream discontinuity at appSequence=\(frame.sequenceNumber, privacy: .public); resetting decoder at keyframe"
+            )
+            resetSession()
+        case .decodeThroughDiscontinuity:
+            KVMLog.video.info(
+                "H.264 stream discontinuity at appSequence=\(frame.sequenceNumber, privacy: .public); decoding through because no keyframe was available"
+            )
+        }
 
         var parameterSetsChanged = false
         for unit in units {
@@ -58,7 +103,7 @@ public final class H264Decoder: @unchecked Sendable {
         }
 
         if decompressionSession == nil {
-            guard frame.isKeyFrame, sps != nil, pps != nil else { return }
+            guard isKeyFrame, sps != nil, pps != nil else { return }
             try createSession()
         }
 
@@ -82,6 +127,7 @@ public final class H264Decoder: @unchecked Sendable {
         resetSession()
         sps = nil
         pps = nil
+        continuityGate.reset()
     }
 
     private func resetSession() {

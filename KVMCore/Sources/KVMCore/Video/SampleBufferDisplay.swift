@@ -35,6 +35,7 @@ public final class SampleBufferDisplay {
 
     public func flush() {
         enqueuedCount = 0
+        KVMLog.video.info("Sample buffer display layer flush")
         layer.flushAndRemoveImage()
     }
 }
