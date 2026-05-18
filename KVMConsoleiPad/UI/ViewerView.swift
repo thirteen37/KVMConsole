@@ -161,7 +161,9 @@ struct ViewerView: View {
             .help("Show on-screen keyboard")
         }
 
+        #if compiler(>=6.2)
         ToolbarSpacer(.fixed, placement: .topBarTrailing)
+        #endif
 
         ToolbarItem(placement: .topBarTrailing) {
             HStack(spacing: 14) {
