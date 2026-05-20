@@ -11,6 +11,7 @@ final class GLKVMH264MediaSocketTests: XCTestCase {
         XCTAssertTrue(frame.isKeyFrame)
         XCTAssertEqual(frame.timestampMicros, 123)
         XCTAssertEqual(frame.payload, Data([0x00, 0x00, 0x00, 0x01, 0x65]))
+        XCTAssertEqual(frame.sequenceNumber, 0)
     }
 
     func test_parseDirectDeltaFrame() throws {

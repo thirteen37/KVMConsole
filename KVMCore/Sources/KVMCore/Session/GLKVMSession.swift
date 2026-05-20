@@ -8,10 +8,18 @@ public final class GLKVMSession: KVMSession {
     public var onStateChange: ((KVMSessionState) -> Void)?
     public var onVideoSize: ((CGSize?) -> Void)?
     public var onFlush: (() -> Void)?
+    public var onHostStatusChange: ((KVMHostStatus?) -> Void)?
 
     public private(set) var state: KVMSessionState = .disconnected {
         didSet {
             onStateChange?(state)
+        }
+    }
+
+    public private(set) var hostStatus: KVMHostStatus? {
+        didSet {
+            guard hostStatus != oldValue else { return }
+            onHostStatusChange?(hostStatus)
         }
     }
 
@@ -79,7 +87,6 @@ public final class GLKVMSession: KVMSession {
                 KVMLog.glkvm.info("GLKVM streamer video format set to H.264")
 
                 let controlSocket = GLKVMControlSocket(device: configuration.device, authToken: authToken)
-                try await controlSocket.connect()
                 await controlSocket.setOnDisconnect { [weak self] error in
                     Task { @MainActor in
                         guard let self, self.generation == myGeneration else { return }
@@ -87,6 +94,13 @@ public final class GLKVMSession: KVMSession {
                         self.finishWithError(error)
                     }
                 }
+                await controlSocket.setOnHostStatusUpdate { [weak self] status in
+                    Task { @MainActor in
+                        guard let self, self.generation == myGeneration else { return }
+                        self.hostStatus = status
+                    }
+                }
+                try await controlSocket.connect()
                 localControlSocket = controlSocket
                 let mouseMoveCoalescer = MouseMoveCoalescer { report in
                     await controlSocket.sendMouseAbsoluteReport(report)
@@ -193,6 +207,7 @@ public final class GLKVMSession: KVMSession {
             streamTask?.cancel()
         }
         streamTask = nil
+        hostStatus = nil
         mediaSocket?.cancel()
         mediaSocket = nil
 

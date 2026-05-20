@@ -138,28 +138,34 @@ struct ViewerView: View {
             }
             .toggleStyle(.button)
             .labelStyle(.iconOnly)
-            .help("Keyboard capture")
+            .help(model.isKeyboardCaptureEnabled
+                  ? "Forwarding keyboard to host — tap to stop"
+                  : "Keyboard forwarding off — tap to enable")
 
             Toggle(isOn: $model.isMouseCaptureEnabled) {
                 Label("Mouse", systemImage: "cursorarrow")
             }
             .toggleStyle(.button)
             .labelStyle(.iconOnly)
-            .help("Mouse capture")
+            .help(model.isMouseCaptureEnabled
+                  ? "Forwarding mouse to host — tap to stop"
+                  : "Mouse forwarding off — tap to enable")
 
             Toggle(isOn: $model.isScrollInverted) {
                 Label("Invert Scroll", systemImage: "arrow.up.arrow.down")
             }
             .toggleStyle(.button)
             .labelStyle(.iconOnly)
-            .help("Invert scroll")
+            .help(model.isScrollInverted
+                  ? "Scroll direction inverted — tap to use natural direction"
+                  : "Natural scroll direction — tap to invert")
 
             Toggle(isOn: $showModifierBar) {
                 Label("Modifiers", systemImage: "command")
             }
             .toggleStyle(.button)
             .labelStyle(.iconOnly)
-            .help("Modifier bar")
+            .help(showModifierBar ? "Hide modifier-key bar" : "Show modifier-key bar")
 
             Button {
                 keyboardFocusToken += 1
@@ -167,18 +173,33 @@ struct ViewerView: View {
                 Label("Show Keyboard", systemImage: "keyboard.chevron.compact.down")
             }
             .labelStyle(.iconOnly)
-            .help("Show keyboard")
+            .help("Show on-screen keyboard")
+        }
 
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 8, height: 8)
-                Text(model.state.displayText)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 92, alignment: .leading)
+        #if compiler(>=6.2)
+        ToolbarSpacer(.fixed, placement: .topBarTrailing)
+        #endif
+
+        ToolbarItem(placement: .topBarTrailing) {
+            HStack(spacing: 14) {
+                if model.supportsHostStatus {
+                    HostStatusIndicators(
+                        status: model.hostStatus,
+                        isActive: model.state == .streaming
+                    )
+                }
+
+                HStack(spacing: 4) {
+                    Image(systemName: connectionSymbol)
+                        .foregroundStyle(statusColor)
+                    Text(model.state.displayText)
+                        .font(.callout)
+                }
             }
+            .padding(.horizontal, 12)
+        }
 
+        ToolbarItemGroup(placement: .topBarTrailing) {
             if model.supportsPowerControl {
                 Menu {
                     Button("On") { model.powerOn() }
@@ -205,10 +226,13 @@ struct ViewerView: View {
                     model.isStreaming ? "Disconnect" : "Reconnect",
                     systemImage: model.isStreaming ? "xmark.circle" : "arrow.clockwise"
                 )
-                .frame(minWidth: 92, alignment: .leading)
+                .padding(.horizontal, 6)
             }
             .labelStyle(.titleAndIcon)
             .controlSize(.small)
+            .help(model.isStreaming
+                  ? "Disconnect from \(model.device.host)"
+                  : "Reconnect to \(model.device.host)")
         }
     }
 
@@ -245,6 +269,15 @@ struct ViewerView: View {
         case .error: return .red
         case .connecting: return .orange
         case .disconnected: return .secondary
+        }
+    }
+
+    private var connectionSymbol: String {
+        switch model.state {
+        case .streaming: return "antenna.radiowaves.left.and.right"
+        case .connecting: return "antenna.radiowaves.left.and.right"
+        case .disconnected: return "antenna.radiowaves.left.and.right.slash"
+        case .error: return "exclamationmark.triangle.fill"
         }
     }
 

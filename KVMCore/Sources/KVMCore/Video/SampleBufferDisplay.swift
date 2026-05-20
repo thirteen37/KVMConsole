@@ -138,6 +138,7 @@ public final class SampleBufferDisplay {
 
     public func flush() {
         enqueuedCount = 0
+        KVMLog.video.info("Sample buffer display layer flush")
         let flush = { [layer, sampleLayer] in
             CATransaction.begin()
             CATransaction.setDisableActions(true)

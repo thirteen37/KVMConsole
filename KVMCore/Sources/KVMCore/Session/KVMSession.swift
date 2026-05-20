@@ -36,14 +36,31 @@ public enum KVMSessionState: Equatable {
     }
 }
 
+public enum ATXPowerState: Equatable, Sendable {
+    case on
+    case off
+}
+
+public struct KVMHostStatus: Equatable, Sendable {
+    public var atxPower: ATXPowerState?
+    public var hdmiSignal: Bool?
+
+    public init(atxPower: ATXPowerState? = nil, hdmiSignal: Bool? = nil) {
+        self.atxPower = atxPower
+        self.hdmiSignal = hdmiSignal
+    }
+}
+
 @MainActor
 public protocol KVMSession: AnyObject {
     var onStateChange: ((KVMSessionState) -> Void)? { get set }
     var onVideoSize: ((CGSize?) -> Void)? { get set }
     var onFlush: (() -> Void)? { get set }
+    var onHostStatusChange: ((KVMHostStatus?) -> Void)? { get set }
     var state: KVMSessionState { get }
     var isStreaming: Bool { get }
     var powerControl: KVMPowerControl? { get }
+    var hostStatus: KVMHostStatus? { get }
 
     func connect(_ configuration: KVMSessionConfiguration)
     func disconnect(updateState: Bool)

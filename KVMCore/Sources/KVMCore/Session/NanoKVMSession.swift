@@ -8,6 +8,7 @@ public final class NanoKVMSession: KVMSession {
     public var onStateChange: ((KVMSessionState) -> Void)?
     public var onVideoSize: ((CGSize?) -> Void)?
     public var onFlush: (() -> Void)?
+    public var onHostStatusChange: ((KVMHostStatus?) -> Void)?
 
     public private(set) var state: KVMSessionState = .disconnected {
         didSet {
@@ -38,6 +39,8 @@ public final class NanoKVMSession: KVMSession {
     }
 
     public var powerControl: KVMPowerControl? { nil }
+
+    public var hostStatus: KVMHostStatus? { nil }
 
     public func connect(_ configuration: KVMSessionConfiguration) {
         disconnect(updateState: false)

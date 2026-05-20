@@ -8,6 +8,7 @@ final class H264StreamFrameParserTests: XCTestCase {
         XCTAssertTrue(frame.isKeyFrame)
         XCTAssertEqual(frame.timestampMicros, 1_234_567)
         XCTAssertEqual(frame.payload, Data([0, 0, 0, 1, 0x65]))
+        XCTAssertEqual(frame.sequenceNumber, 0)
     }
 
     func test_parseDeltaFrame() throws {

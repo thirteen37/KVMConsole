@@ -14,6 +14,7 @@ public final class ViewerViewModel: ObservableObject {
     @Published public var passwordInput: String = ""
     @Published public var isFullscreen: Bool = false
     @Published public var showFullscreenBanner: Bool = false
+    @Published public var hostStatus: KVMHostStatus?
 
     public var toggleFullscreen: (() -> Void)?
     public let renderCoordinator: SampleBufferRenderCoordinator
@@ -58,6 +59,9 @@ public final class ViewerViewModel: ObservableObject {
         session.onFlush = { [weak self] in
             self?.flushVideo()
         }
+        session.onHostStatusChange = { [weak self] status in
+            self?.hostStatus = status
+        }
 
         // Forward only scale/center changes — the body uses those to drive VideoRenderView. Other
         // zoom @Published fields (notably the per-mouse-event cursorNormalized) would re-render the
@@ -83,6 +87,7 @@ public final class ViewerViewModel: ObservableObject {
     public var isStreaming: Bool { session.isStreaming }
     public var powerControl: KVMPowerControl? { session.powerControl }
     public var supportsPowerControl: Bool { device.kvmType == .comet }
+    public var supportsHostStatus: Bool { device.kvmType == .comet }
 
     public func reconnect() {
         if let savedPassword = savedPassword(), !savedPassword.isEmpty {

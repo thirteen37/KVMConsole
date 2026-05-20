@@ -19,6 +19,8 @@ public actor GLKVMControlSocket {
     private var heartbeatTask: Task<Void, Never>?
     private var receiveTask: Task<Void, Never>?
     private var onDisconnect: (@Sendable (Error) -> Void)?
+    private var onHostStatusUpdate: (@Sendable (KVMHostStatus) -> Void)?
+    private var hostStatus = KVMHostStatus()
     private var lastKeyboardReport = HIDKeyboardReport()
     private var lastMouseButtons: UInt8 = 0
 
@@ -41,6 +43,10 @@ public actor GLKVMControlSocket {
 
     public func setOnDisconnect(_ callback: @escaping @Sendable (Error) -> Void) {
         onDisconnect = callback
+    }
+
+    public func setOnHostStatusUpdate(_ callback: @escaping @Sendable (KVMHostStatus) -> Void) {
+        onHostStatusUpdate = callback
     }
 
     public func connect() throws {
@@ -209,7 +215,7 @@ public actor GLKVMControlSocket {
         while !Task.isCancelled {
             do {
                 let message = try await task.receive()
-                Self.logInboundMessage(message)
+                handleInboundMessage(message)
             } catch {
                 KVMLog.glkvm.error("GLKVM control WebSocket closed: \(error.localizedDescription, privacy: .public)")
                 let wasCancelled = Task.isCancelled
@@ -223,7 +229,7 @@ public actor GLKVMControlSocket {
         }
     }
 
-    private nonisolated static func logInboundMessage(_ message: URLSessionWebSocketTask.Message) {
+    private func handleInboundMessage(_ message: URLSessionWebSocketTask.Message) {
         let data: Data
         switch message {
         case .string(let text):
@@ -240,13 +246,45 @@ public actor GLKVMControlSocket {
             eventType != "pong"
         else { return }
 
-        if eventType == "streamer", let event = object["event"] as? [String: Any] {
-            KVMLog.glkvm.info("GLKVM streamer state: \(streamerStateDescription(event), privacy: .public)")
-        } else if eventType == "hid", let event = object["event"] as? [String: Any] {
-            KVMLog.glkvm.info("GLKVM HID state: \(hidStateDescription(event), privacy: .public)")
-        } else if eventType == "atx" {
-            KVMLog.glkvm.info("GLKVM ATX state received")
+        let event = object["event"] as? [String: Any]
+
+        if eventType == "streamer", let event {
+            KVMLog.glkvm.info("GLKVM streamer state: \(Self.streamerStateDescription(event), privacy: .public)")
+            if let signal = Self.parseStreamerHDMISignal(event), hostStatus.hdmiSignal != signal {
+                hostStatus.hdmiSignal = signal
+                onHostStatusUpdate?(hostStatus)
+            }
+        } else if eventType == "hid", let event {
+            KVMLog.glkvm.info("GLKVM HID state: \(Self.hidStateDescription(event), privacy: .public)")
+        } else if eventType == "atx", let event {
+            if let power = Self.parseATXPower(event), hostStatus.atxPower != power {
+                hostStatus.atxPower = power
+                onHostStatusUpdate?(hostStatus)
+            }
         }
+    }
+
+    public nonisolated static func parseATXPower(_ event: [String: Any]) -> ATXPowerState? {
+        // GLKVM (Comet) exposes the host power state as a top-level string field
+        // `event.power` with values "on" / "off". The nested `leds.power` boolean is the
+        // physical LED indicator state, which is *not* the same as host power (e.g.,
+        // leds.power=false while the host is powered on).
+        if let raw = event["power"] as? String {
+            switch raw.lowercased() {
+            case "on": return .on
+            case "off": return .off
+            default: return nil
+            }
+        }
+        return nil
+    }
+
+    public nonisolated static func parseStreamerHDMISignal(_ event: [String: Any]) -> Bool? {
+        // Live telemetry nests under `event.streamer.hdmi.signal`. The initial event after
+        // subscription has `streamer: null` (capability snapshot) and is correctly ignored.
+        let streamer = event["streamer"] as? [String: Any]
+        let hdmi = streamer?["hdmi"] as? [String: Any]
+        return hdmi?["signal"] as? Bool
     }
 
     private var controlURL: URL? {
@@ -262,9 +300,12 @@ public actor GLKVMControlSocket {
     }
 
     private nonisolated static func streamerStateDescription(_ event: [String: Any]) -> String {
-        let source = event["source"] as? [String: Any]
-        let hdmi = event["hdmi"] as? [String: Any]
-        let params = event["params"] as? [String: Any]
+        // The capability/config event has `streamer: null` with `params` at the top level.
+        // The runtime telemetry event nests everything under `event.streamer`.
+        let streamer = event["streamer"] as? [String: Any]
+        let source = streamer?["source"] as? [String: Any]
+        let hdmi = streamer?["hdmi"] as? [String: Any]
+        let params = (streamer?["h264"] as? [String: Any]) ?? (event["params"] as? [String: Any])
         let resolution = source?["resolution"] as? [String: Any]
         let width = valueDescription(resolution?["width"])
         let height = valueDescription(resolution?["height"])
@@ -273,8 +314,8 @@ public actor GLKVMControlSocket {
             "sourceOnline=\(valueDescription(source?["online"]))",
             "hdmiSignal=\(valueDescription(hdmi?["signal"]))",
             "resolution=\(width)x\(height)",
-            "h264Bitrate=\(valueDescription(params?["h264_bitrate"]))",
-            "h264Gop=\(valueDescription(params?["h264_gop"]))",
+            "h264Bitrate=\(valueDescription(params?["bitrate"] ?? params?["h264_bitrate"]))",
+            "h264Gop=\(valueDescription(params?["gop"] ?? params?["h264_gop"]))",
         ].joined(separator: " ")
     }
 

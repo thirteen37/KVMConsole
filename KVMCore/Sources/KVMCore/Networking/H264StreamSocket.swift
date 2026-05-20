@@ -20,11 +20,50 @@ public struct H264StreamFrame: Equatable, Sendable {
     public let isKeyFrame: Bool
     public let timestampMicros: UInt64
     public let payload: Data
+    public let sequenceNumber: UInt64
 
-    public init(isKeyFrame: Bool, timestampMicros: UInt64, payload: Data) {
+    public init(isKeyFrame: Bool, timestampMicros: UInt64, payload: Data, sequenceNumber: UInt64 = 0) {
         self.isKeyFrame = isKeyFrame
         self.timestampMicros = timestampMicros
         self.payload = payload
+        self.sequenceNumber = sequenceNumber
+    }
+}
+
+enum H264StreamBuffering {
+    static let frameLimit = 12
+}
+
+struct H264StreamFrameSequencer {
+    private var nextSequenceNumber: UInt64 = 0
+    private var droppedFrameCount: UInt64 = 0
+    private let source: String
+
+    init(source: String) {
+        self.source = source
+    }
+
+    mutating func nextFrame(from frame: H264StreamFrame) -> H264StreamFrame {
+        defer { nextSequenceNumber &+= 1 }
+        return H264StreamFrame(
+            isKeyFrame: frame.isKeyFrame,
+            timestampMicros: frame.timestampMicros,
+            payload: frame.payload,
+            sequenceNumber: nextSequenceNumber
+        )
+    }
+
+    mutating func recordYield(_ result: AsyncThrowingStream<H264StreamFrame, Error>.Continuation.YieldResult) {
+        guard case .dropped(let droppedFrame) = result else { return }
+
+        droppedFrameCount &+= 1
+        guard droppedFrameCount <= 5 || droppedFrameCount.isMultiple(of: 30) else { return }
+
+        let source = source
+        let totalDropped = droppedFrameCount
+        KVMLog.video.info(
+            "H.264 stream buffer dropped frame source=\(source, privacy: .public) appSequence=\(droppedFrame.sequenceNumber, privacy: .public) totalDropped=\(totalDropped, privacy: .public)"
+        )
     }
 }
 
@@ -69,16 +108,18 @@ public final class H264StreamSocket: @unchecked Sendable {
         let webSocketTask = session.webSocketTask(with: request)
         task = webSocketTask
 
-        return AsyncThrowingStream(bufferingPolicy: .bufferingNewest(2)) { continuation in
+        return AsyncThrowingStream(bufferingPolicy: .bufferingNewest(H264StreamBuffering.frameLimit)) { continuation in
             webSocketTask.resume()
             let receiveTask = Task {
+                var frameSequencer = H264StreamFrameSequencer(source: "NanoKVM H.264")
                 do {
                     while !Task.isCancelled {
                         let message = try await webSocketTask.receive()
                         switch message {
                         case .data(let data):
                             do {
-                                continuation.yield(try H264StreamFrameParser.parse(data))
+                                let frame = try H264StreamFrameParser.parse(data)
+                                frameSequencer.recordYield(continuation.yield(frameSequencer.nextFrame(from: frame)))
                             } catch H264StreamError.frameTooShort, H264StreamError.emptyPayload {
                                 continue
                             }
