@@ -195,11 +195,11 @@ public struct DeviceEditorView: View {
 
     private var isValid: Bool {
         let hasRequiredUsername = !showsUsername || !trimmedUsername.isEmpty
-        return !trimmedHost.isEmpty && hasRequiredUsername && Int(port) != nil
+        return !trimmedHost.isEmpty && hasRequiredUsername && (kvmType == .appleScreenSharing || resolvedPortValue != nil)
     }
 
     private func buildDevice() -> Device {
-        let resolvedPort = kvmType == .appleScreenSharing ? 5900 : Int(port) ?? defaultPort
+        let resolvedPort = kvmType == .appleScreenSharing ? 5900 : resolvedPortValue ?? defaultPort
         let displayName = trimmedName.isEmpty ? trimmedHost : trimmedName
         let resolvedUsername = kvmType == .vnc ? "" : trimmedUsername
         let resolvedScheme = isRFBType ? .http : scheme
@@ -228,6 +228,11 @@ public struct DeviceEditorView: View {
                 lastConnectedAt: existing.lastConnectedAt
             )
         }
+    }
+
+    private var resolvedPortValue: Int? {
+        guard let parsed = Int(port), (0...Int(UInt16.max)).contains(parsed) else { return nil }
+        return parsed
     }
 
     private var defaultPort: Int {

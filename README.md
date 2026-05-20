@@ -75,7 +75,7 @@ To produce a locally signed build (no notarization):
 NOTARIZE=0 Scripts/build-developer-id.sh
 ```
 
-The app is mostly built on Apple frameworks (SwiftUI, AppKit/UIKit, AVFoundation, VideoToolbox, CoreMedia, CoreVideo, Security, Network). GLKVM WebRTC support uses the `stasel/WebRTC` Swift package. RFB/VNC support is implemented in Swift over plain TCP with Apple Diffie-Hellman and standard VNC authentication, Tight/ZRLE/Raw/CopyRect decoding, and a direct latest-frame render path for decoded framebuffers.
+The app is mostly built on Apple frameworks (SwiftUI, AppKit/UIKit, AVFoundation, VideoToolbox, CoreMedia, CoreVideo, Security, Network). GLKVM WebRTC support uses the `stasel/WebRTC` Swift package. RFB/VNC support is implemented in Swift over plain TCP with Apple Diffie-Hellman and standard VNC authentication, ZRLE/Raw/CopyRect decoding, and a direct latest-frame render path for decoded framebuffers.
 
 ## Project layout
 

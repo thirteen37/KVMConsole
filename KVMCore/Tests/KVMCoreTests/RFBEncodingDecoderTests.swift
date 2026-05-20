@@ -3,20 +3,6 @@ import zlib
 @testable import KVMCore
 
 final class RFBEncodingDecoderTests: XCTestCase {
-    func test_tightFillAppliesSolidColor() throws {
-        let framebuffer = RFBFramebuffer()
-        try framebuffer.resize(width: 2, height: 1)
-        let decoder = try RFBTightDecoder()
-        let rect = RFBRectangle(x: 0, y: 0, width: 2, height: 1, encoding: RFBEncoding.tight.rawValue)
-
-        try decoder.apply(rect: rect, payload: Data([0x80, 0x10, 0x20, 0x30]), to: framebuffer)
-
-        XCTAssertEqual(
-            try framebuffer.pixelBytes(),
-            Data([0x30, 0x20, 0x10, 0, 0x30, 0x20, 0x10, 0])
-        )
-    }
-
     func test_zrleRawTileAppliesBGRPixels() throws {
         let framebuffer = RFBFramebuffer()
         try framebuffer.resize(width: 2, height: 1)

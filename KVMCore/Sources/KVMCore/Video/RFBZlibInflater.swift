@@ -30,12 +30,12 @@ final class RFBZlibInflater: @unchecked Sendable {
     func inflate(_ data: Data, expectedByteCount: Int? = nil) throws -> Data {
         var output = Data()
         var input = data
+        var chunk = [UInt8](repeating: 0, count: 64 * 1024)
         try input.withUnsafeMutableBytes { inputBuffer in
             stream.next_in = inputBuffer.baseAddress?.assumingMemoryBound(to: Bytef.self)
             stream.avail_in = uInt(data.count)
 
             repeat {
-                var chunk = [UInt8](repeating: 0, count: max(4096, expectedByteCount ?? 0))
                 let status = chunk.withUnsafeMutableBufferPointer { chunkBuffer in
                     stream.next_out = chunkBuffer.baseAddress
                     stream.avail_out = uInt(chunkBuffer.count)

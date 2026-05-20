@@ -1,3 +1,4 @@
+import Network
 import XCTest
 @testable import KVMCore
 
@@ -58,6 +59,12 @@ final class RFBProtocolTests: XCTestCase {
         )
 
         XCTAssertEqual(Array(data), [150, 1, 0, 1, 0, 2, 2, 128, 1, 224])
+    }
+
+    func test_endpointPortFallsBackToRFBForOutOfRangeValues() {
+        XCTAssertEqual(RFBClient.endpointPort(from: 5901), NWEndpoint.Port(rawValue: 5901)!)
+        XCTAssertEqual(RFBClient.endpointPort(from: 99_999), NWEndpoint.Port(rawValue: 5900)!)
+        XCTAssertEqual(RFBClient.endpointPort(from: -1), NWEndpoint.Port(rawValue: 5900)!)
     }
 
     func test_clientFenceResponseClearsRequestFlag() throws {

@@ -20,7 +20,6 @@ public actor RFBClient {
 
     private var connection: NWConnection?
     private var zrleDecoder: RFBZRLEDecoder?
-    private var tightDecoder: RFBTightDecoder?
     private var continuousUpdatesSupported = false
     private var continuousUpdatesEnabled = false
     private var receiveTimeoutSeconds: TimeInterval?
@@ -87,6 +86,10 @@ public actor RFBClient {
         return mask
     }
 
+    static func endpointPort(from devicePort: Int) -> NWEndpoint.Port {
+        UInt16(exactly: devicePort).flatMap(NWEndpoint.Port.init(rawValue:)) ?? .rfb
+    }
+
     private func makeConnection() -> NWConnection {
         let tcpOptions = NWProtocolTCP.Options()
         tcpOptions.noDelay = true
@@ -94,7 +97,7 @@ public actor RFBClient {
         let parameters = NWParameters(tls: nil, tcp: tcpOptions)
         return NWConnection(
             host: NWEndpoint.Host(device.host),
-            port: NWEndpoint.Port(rawValue: UInt16(device.port)) ?? .rfb,
+            port: Self.endpointPort(from: device.port),
             using: parameters
         )
     }
@@ -211,8 +214,10 @@ public actor RFBClient {
             switch messageType {
             case 0:
                 try await handleFramebufferUpdate()
-            case 2:
+            case 1:
                 try await skipSetColourMapEntries()
+            case 2:
+                break
             case 3:
                 try await skipServerCutText()
             case 150:
@@ -262,19 +267,11 @@ public actor RFBClient {
                 }
                 try zrleDecoder?.apply(rect: rectangle, compressedData: compressedData, to: framebuffer)
                 shouldEmitFrame = true
-            case RFBEncoding.tight.rawValue:
-                let payload = try await readTightPayload(rect: rectangle)
-                if tightDecoder == nil {
-                    tightDecoder = try RFBTightDecoder()
-                }
-                try tightDecoder?.apply(rect: rectangle, payload: payload, to: framebuffer)
-                shouldEmitFrame = true
             case RFBEncoding.desktopSize.rawValue:
                 try framebuffer.resize(width: Int(rectangle.width), height: Int(rectangle.height))
                 inputSender.updateFramebufferSize(width: Int(rectangle.width), height: Int(rectangle.height))
                 onVideoSize(CGSize(width: Int(rectangle.width), height: Int(rectangle.height)))
                 try await sendFullUpdateRequest(incremental: false)
-                shouldEmitFrame = true
             case RFBEncoding.lastRect.rawValue:
                 break rectangleLoop
             default:
@@ -331,68 +328,6 @@ public actor RFBClient {
         let length = Int(try reader.readUInt8())
         let payload = length > 0 ? try await readExact(byteCount: length) : Data()
         try await send(RFBClientMessage.clientFenceResponse(flags: flags, payload: payload))
-    }
-
-    private func readTightPayload(rect: RFBRectangle) async throws -> Data {
-        var payload = Data()
-        let control = try await readExact(byteCount: 1)[0]
-        payload.append(control)
-        let compressionType = control >> 4
-        switch compressionType {
-        case 0x08:
-            payload.append(try await readExact(byteCount: 3))
-        case 0x09:
-            let compact = try await readCompactLength()
-            payload.append(compact.bytes)
-            payload.append(try await readExact(byteCount: compact.length))
-        case 0x00...0x07:
-            let width = Int(rect.width)
-            let height = Int(rect.height)
-            var filter: UInt8 = 0
-            var expectedByteCount = width * height * 3
-            if (control & 0x40) != 0 {
-                filter = try await readExact(byteCount: 1)[0]
-                payload.append(filter)
-            }
-            if filter == 1 {
-                let paletteSizeMinusOne = try await readExact(byteCount: 1)[0]
-                payload.append(paletteSizeMinusOne)
-                let paletteSize = Int(paletteSizeMinusOne) + 1
-                payload.append(try await readExact(byteCount: paletteSize * 3))
-                expectedByteCount = paletteSize == 2 ? ((width + 7) / 8) * height : width * height
-            } else if filter == 2 {
-                expectedByteCount = width * height * 3
-            }
-
-            if expectedByteCount < 12 {
-                payload.append(try await readExact(byteCount: expectedByteCount))
-            } else {
-                let compact = try await readCompactLength()
-                payload.append(compact.bytes)
-                payload.append(try await readExact(byteCount: compact.length))
-            }
-        default:
-            throw RFBError.malformedMessage("unsupported Tight compression control \(control)")
-        }
-        return payload
-    }
-
-    private func readCompactLength() async throws -> (length: Int, bytes: Data) {
-        var bytes = Data()
-        let byte0 = try await readExact(byteCount: 1)[0]
-        bytes.append(byte0)
-        var length = Int(byte0 & 0x7f)
-        if (byte0 & 0x80) != 0 {
-            let byte1 = try await readExact(byteCount: 1)[0]
-            bytes.append(byte1)
-            length |= Int(byte1 & 0x7f) << 7
-            if (byte1 & 0x80) != 0 {
-                let byte2 = try await readExact(byteCount: 1)[0]
-                bytes.append(byte2)
-                length |= Int(byte2) << 14
-            }
-        }
-        return (length, bytes)
     }
 
     private func sendFullUpdateRequest(incremental: Bool) async throws {
