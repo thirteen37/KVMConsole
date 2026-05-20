@@ -212,7 +212,7 @@ public actor RFBClient {
             case 0:
                 try await handleFramebufferUpdate()
             case 2:
-                break
+                try await skipSetColourMapEntries()
             case 3:
                 try await skipServerCutText()
             case 150:
@@ -285,6 +285,17 @@ public actor RFBClient {
         if shouldEmitFrame {
             let sampleBuffer = try framebuffer.makeSampleBuffer()
             onSampleBuffer(sampleBuffer)
+        }
+    }
+
+    private func skipSetColourMapEntries() async throws {
+        let header = try await readExact(byteCount: 5)
+        var reader = RFBByteReader(header)
+        try reader.skip(1)
+        _ = try reader.readUInt16()
+        let colorCount = Int(try reader.readUInt16())
+        if colorCount > 0 {
+            _ = try await readExact(byteCount: colorCount * 6)
         }
     }
 

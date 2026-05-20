@@ -21,9 +21,32 @@ final class HIDUsageToX11KeysymTests: XCTestCase {
             HIDUsageToX11Keysym.transitions(from: old, to: new),
             [
                 .init(keysym: 0x0041, isDown: false),
+                .init(keysym: 0x0042, isDown: false),
                 .init(keysym: 0xffe1, isDown: false),
                 .init(keysym: 0xffe3, isDown: true),
+                .init(keysym: 0x0062, isDown: true),
                 .init(keysym: 0x0063, isDown: true),
+            ]
+        )
+    }
+
+    func test_modifierChangeRekeysHeldNonModifierKeys() {
+        let a = HIDKeyboardReport(keycodes: [0x04])
+        let shiftedA = HIDKeyboardReport(modifier: HIDModifierBit.leftShift.rawValue, keycodes: [0x04])
+
+        XCTAssertEqual(
+            HIDUsageToX11Keysym.transitions(from: a, to: shiftedA),
+            [
+                .init(keysym: 0x0061, isDown: false),
+                .init(keysym: 0xffe1, isDown: true),
+                .init(keysym: 0x0041, isDown: true),
+            ]
+        )
+
+        XCTAssertEqual(
+            HIDUsageToX11Keysym.transitions(from: shiftedA, to: HIDKeyboardReport(modifier: HIDModifierBit.leftShift.rawValue)),
+            [
+                .init(keysym: 0x0041, isDown: false),
             ]
         )
     }

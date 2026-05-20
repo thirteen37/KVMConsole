@@ -81,6 +81,7 @@ public enum HIDUsageToX11Keysym {
         var transitions: [KeyTransition] = []
         let previousKeys = Set(previous.keycodes.filter { $0 != 0 })
         let currentKeys = Set(current.keycodes.filter { $0 != 0 })
+        let modifierChanged = previous.modifier != current.modifier
 
         for usage in previous.keycodes where usage != 0 && !currentKeys.contains(usage) {
             if let keysym = lookup(usage: usage, modifier: previous.modifier) {
@@ -88,8 +89,24 @@ public enum HIDUsageToX11Keysym {
             }
         }
 
+        if modifierChanged {
+            for usage in previous.keycodes where usage != 0 && currentKeys.contains(usage) {
+                if let keysym = lookup(usage: usage, modifier: previous.modifier) {
+                    transitions.append(KeyTransition(keysym: keysym, isDown: false))
+                }
+            }
+        }
+
         appendModifierTransitions(to: &transitions, from: previous, to: current, isDown: false)
         appendModifierTransitions(to: &transitions, from: previous, to: current, isDown: true)
+
+        if modifierChanged {
+            for usage in current.keycodes where usage != 0 && previousKeys.contains(usage) {
+                if let keysym = lookup(usage: usage, modifier: current.modifier) {
+                    transitions.append(KeyTransition(keysym: keysym, isDown: true))
+                }
+            }
+        }
 
         for usage in current.keycodes where usage != 0 && !previousKeys.contains(usage) {
             if let keysym = lookup(usage: usage, modifier: current.modifier) {

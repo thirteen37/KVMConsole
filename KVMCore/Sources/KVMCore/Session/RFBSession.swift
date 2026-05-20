@@ -96,6 +96,7 @@ public final class RFBSession: KVMSession {
     }
 
     public func disconnect(updateState: Bool = true) {
+        generation &+= 1
         clearResources(cancelTask: true)
         if updateState {
             state = .disconnected
