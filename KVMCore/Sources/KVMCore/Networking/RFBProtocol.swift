@@ -129,18 +129,15 @@ public enum RFBSecurityPreference: Equatable, Sendable {
 
 public struct RFBSessionProfile: Equatable, Sendable {
     public let securityPreference: RFBSecurityPreference
-    public let enablesAppleAudio: Bool
     public let enablesContinuousUpdates: Bool
 
     public static let appleScreenSharing = RFBSessionProfile(
         securityPreference: .appleScreenSharing,
-        enablesAppleAudio: true,
         enablesContinuousUpdates: false
     )
 
     public static let vnc = RFBSessionProfile(
         securityPreference: .vnc,
-        enablesAppleAudio: false,
         enablesContinuousUpdates: false
     )
 }
@@ -234,7 +231,6 @@ public enum RFBEncoding: Int32, Sendable {
     case lastRect = -224
     case fence = -312
     case continuousUpdates = -313
-    case appleAudio = -1000
 }
 
 public enum RFBClientMessage {

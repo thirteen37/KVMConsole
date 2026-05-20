@@ -47,9 +47,6 @@ public final class SampleBufferDisplay {
         if flushQueuedFrames {
             sampleLayer.flush()
         }
-        if !sampleLayer.isReadyForMoreMediaData {
-            sampleLayer.flush()
-        }
         enqueuedCount += 1
         if enqueuedCount == 1 || enqueuedCount % 120 == 0 {
             KVMLog.video.info("Sample buffer display layer enqueue count: \(self.enqueuedCount, privacy: .public)")

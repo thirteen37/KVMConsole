@@ -125,7 +125,7 @@ public actor RFBClient {
         let serverGreeting = try await readExact(byteCount: 12)
         let serverVersion = try RFBProtocolVersion(greeting: serverGreeting)
         KVMLog.rfb.info("RFB server version \(serverVersion.major, privacy: .public).\(serverVersion.minor, privacy: .public)")
-        guard serverVersion.major == 3, serverVersion.minor >= 7 else {
+        guard serverVersion.major == 3, serverVersion.minor >= 8 else {
             throw RFBError.unsupportedProtocolVersion("\(serverVersion.major).\(serverVersion.minor)")
         }
         try await send(RFBProtocolVersion.v3_8.wireData)
@@ -202,7 +202,7 @@ public actor RFBClient {
     }
 
     private func preferredEncodings() -> [RFBEncoding] {
-        [.tight, .zrle, .copyRect, .raw, .desktopSize, .lastRect, .fence]
+        [.zrle, .copyRect, .raw, .desktopSize, .lastRect, .fence]
     }
 
     private func updateLoop() async throws {
@@ -273,6 +273,7 @@ public actor RFBClient {
                 try framebuffer.resize(width: Int(rectangle.width), height: Int(rectangle.height))
                 inputSender.updateFramebufferSize(width: Int(rectangle.width), height: Int(rectangle.height))
                 onVideoSize(CGSize(width: Int(rectangle.width), height: Int(rectangle.height)))
+                try await sendFullUpdateRequest(incremental: false)
                 shouldEmitFrame = true
             case RFBEncoding.lastRect.rawValue:
                 break rectangleLoop
