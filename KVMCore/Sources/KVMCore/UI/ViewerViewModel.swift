@@ -30,7 +30,7 @@ public final class ViewerViewModel: ObservableObject {
         passwordStore: PasswordStore = KeychainPasswordStore(),
         onConnected: ((Device.ID) -> Void)? = nil
     ) {
-        let renderCoordinator = SampleBufferRenderCoordinator()
+        let renderCoordinator = SampleBufferRenderCoordinator(renderMode: Self.renderMode(for: device.kvmType))
         self.device = device
         self.passwordStore = passwordStore
         self.onConnected = onConnected
@@ -69,6 +69,15 @@ public final class ViewerViewModel: ObservableObject {
             .store(in: &zoomObservers)
 
         attemptAutoConnect()
+    }
+
+    private static func renderMode(for kvmType: Device.KVMType) -> SampleBufferRenderMode {
+        switch kvmType {
+        case .appleScreenSharing, .vnc:
+            return .directLatestFrame
+        case .nanoKVMLite, .nanoKVMUSB, .comet:
+            return .sampleBuffer
+        }
     }
 
     public var isStreaming: Bool { session.isStreaming }

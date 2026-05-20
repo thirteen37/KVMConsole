@@ -12,9 +12,18 @@ public enum KVMSessionFactory {
             return NanoKVMSession(passwordStore: passwordStore, renderCoordinator: renderCoordinator)
         case .comet:
             return GLKVMSession(passwordStore: passwordStore, renderCoordinator: renderCoordinator)
-        case .appleRFB:
-            return NanoKVMSession(passwordStore: passwordStore, renderCoordinator: renderCoordinator)
+        case .appleScreenSharing:
+            return RFBSession(
+                profile: .appleScreenSharing,
+                passwordStore: passwordStore,
+                renderCoordinator: renderCoordinator
+            )
+        case .vnc:
+            return RFBSession(
+                profile: .vnc,
+                passwordStore: passwordStore,
+                renderCoordinator: renderCoordinator
+            )
         }
     }
 }
-

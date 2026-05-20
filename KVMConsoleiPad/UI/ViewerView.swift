@@ -98,11 +98,26 @@ struct ViewerView: View {
             .frame(width: 1, height: 1)
             .accessibilityHidden(true)
 
+            LocalCursorView(
+                isVisible: showsLocalCursor,
+                videoSize: model.videoSize,
+                zoom: model.zoom
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+
             MinimapView(zoom: model.zoom)
                 .padding(12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .allowsHitTesting(false)
         }
+    }
+
+    private var showsLocalCursor: Bool {
+        model.isStreaming
+            && model.isMouseCaptureEnabled
+            && (model.device.kvmType == .appleScreenSharing || model.device.kvmType == .vnc)
     }
 
     @ToolbarContentBuilder

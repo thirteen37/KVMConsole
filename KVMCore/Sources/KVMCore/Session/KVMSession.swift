@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-public struct KVMSessionConfiguration: Equatable {
+public struct KVMSessionConfiguration: Equatable, Sendable {
     public let device: Device
     public let password: String
     public let passwordAccount: String
@@ -50,4 +50,3 @@ public protocol KVMSession: AnyObject {
     func sendKeyboardReport(_ report: HIDKeyboardReport)
     func sendMouseReport(_ report: HIDMouseAbsoluteReport)
 }
-

@@ -110,7 +110,7 @@ final class FullscreenKeyCaptureCoordinator {
     private func report(for event: NSEvent) -> HIDKeyboardReport? {
         switch event.type {
         case .keyDown:
-            guard !event.isARepeat, let usage = HIDKeymap.usage(for: event.keyCode) else { return nil }
+            guard let usage = HIDKeymap.usage(for: event.keyCode) else { return nil }
             return builder.keyDown(usage: usage)
         case .keyUp:
             guard let usage = HIDKeymap.usage(for: event.keyCode) else { return nil }

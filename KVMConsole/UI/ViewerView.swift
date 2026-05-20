@@ -97,6 +97,7 @@ struct ViewerView: View {
             KeyboardCaptureView(
                 isKeyboardEnabled: model.isStreaming && model.isKeyboardCaptureEnabled && !model.isFullscreen,
                 isMouseEnabled: model.isStreaming && model.isMouseCaptureEnabled,
+                hidesLocalCursor: hidesLocalCursor,
                 isScrollInverted: model.isScrollInverted,
                 videoSize: model.videoSize,
                 zoom: model.zoom,
@@ -110,6 +111,10 @@ struct ViewerView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .allowsHitTesting(false)
         }
+    }
+
+    private var hidesLocalCursor: Bool {
+        model.device.kvmType != .appleScreenSharing && model.device.kvmType != .vnc
     }
 
     @ToolbarContentBuilder

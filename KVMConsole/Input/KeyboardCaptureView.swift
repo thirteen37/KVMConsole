@@ -5,6 +5,7 @@ import SwiftUI
 struct KeyboardCaptureView: NSViewRepresentable {
     let isKeyboardEnabled: Bool
     let isMouseEnabled: Bool
+    let hidesLocalCursor: Bool
     let isScrollInverted: Bool
     let videoSize: CGSize?
     let zoom: ViewerZoomState
@@ -15,6 +16,7 @@ struct KeyboardCaptureView: NSViewRepresentable {
         let view = CaptureNSView()
         view.onKeyboardReport = onKeyboardReport
         view.onMouseReport = onMouseReport
+        view.hidesLocalCursor = hidesLocalCursor
         view.setKeyboardEnabled(isKeyboardEnabled)
         view.setMouseEnabled(isMouseEnabled)
         view.isScrollInverted = isScrollInverted
@@ -26,6 +28,7 @@ struct KeyboardCaptureView: NSViewRepresentable {
     func updateNSView(_ nsView: CaptureNSView, context: Context) {
         nsView.onKeyboardReport = onKeyboardReport
         nsView.onMouseReport = onMouseReport
+        nsView.hidesLocalCursor = hidesLocalCursor
         nsView.setKeyboardEnabled(isKeyboardEnabled)
         nsView.setMouseEnabled(isMouseEnabled)
         nsView.isScrollInverted = isScrollInverted
@@ -37,6 +40,11 @@ struct KeyboardCaptureView: NSViewRepresentable {
 final class CaptureNSView: NSView {
     private(set) var isKeyboardEnabled = false
     private(set) var isMouseEnabled = false
+    var hidesLocalCursor = true {
+        didSet {
+            updateCursorVisibility()
+        }
+    }
     var isScrollInverted = true
     var videoSize: CGSize?
     var zoom: ViewerZoomState?
@@ -127,7 +135,7 @@ final class CaptureNSView: NSView {
     }
 
     private func updateCursorVisibility() {
-        setCursorHidden(isMouseEnabled && isMouseInside)
+        setCursorHidden(hidesLocalCursor && isMouseEnabled && isMouseInside)
     }
 
     private func setCursorHidden(_ shouldHide: Bool) {
@@ -223,7 +231,7 @@ final class CaptureNSView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
-        guard isKeyboardEnabled, !event.isARepeat, let usage = HIDKeymap.usage(for: event.keyCode) else {
+        guard isKeyboardEnabled, let usage = HIDKeymap.usage(for: event.keyCode) else {
             return
         }
         emit(keyboardReportBuilder.keyDown(usage: usage))
