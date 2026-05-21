@@ -22,6 +22,49 @@ final class RFBEncodingDecoderTests: XCTestCase {
         )
     }
 
+    func test_zrleSolidTileAppliesColorAcrossTile() throws {
+        let framebuffer = RFBFramebuffer()
+        try framebuffer.resize(width: 2, height: 2)
+        let decoder = try RFBZRLEDecoder()
+        let rect = RFBRectangle(x: 0, y: 0, width: 2, height: 2, encoding: RFBEncoding.zrle.rawValue)
+
+        let tile = Data([0x01, 0x10, 0x20, 0x30])
+        try decoder.apply(rect: rect, compressedData: try zlibCompress(tile), to: framebuffer)
+
+        XCTAssertEqual(
+            try framebuffer.pixelBytes(),
+            Data([
+                0x10, 0x20, 0x30, 0, 0x10, 0x20, 0x30, 0,
+                0x10, 0x20, 0x30, 0, 0x10, 0x20, 0x30, 0,
+            ])
+        )
+    }
+
+    func test_zrlePaletteRLETileAppliesRuns() throws {
+        let framebuffer = RFBFramebuffer()
+        try framebuffer.resize(width: 4, height: 1)
+        let decoder = try RFBZRLEDecoder()
+        let rect = RFBRectangle(x: 0, y: 0, width: 4, height: 1, encoding: RFBEncoding.zrle.rawValue)
+
+        let tile = Data([
+            0x82,
+            0x01, 0x02, 0x03,
+            0x10, 0x20, 0x30,
+            0x81, 0x03,
+        ])
+        try decoder.apply(rect: rect, compressedData: try zlibCompress(tile), to: framebuffer)
+
+        XCTAssertEqual(
+            try framebuffer.pixelBytes(),
+            Data([
+                0x10, 0x20, 0x30, 0,
+                0x10, 0x20, 0x30, 0,
+                0x10, 0x20, 0x30, 0,
+                0x10, 0x20, 0x30, 0,
+            ])
+        )
+    }
+
     func test_bigUIntModExpUsesBigEndianInputs() {
         let result = RFBBigUInt.modExp(
             base: RFBBigUInt(5),

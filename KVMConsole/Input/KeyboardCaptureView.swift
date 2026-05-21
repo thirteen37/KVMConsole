@@ -7,6 +7,7 @@ struct KeyboardCaptureView: NSViewRepresentable {
     let isMouseEnabled: Bool
     let hidesLocalCursor: Bool
     let isScrollInverted: Bool
+    let allowsKeyRepeat: Bool
     let videoSize: CGSize?
     let zoom: ViewerZoomState
     let onKeyboardReport: @MainActor (HIDKeyboardReport) -> Void
@@ -20,6 +21,7 @@ struct KeyboardCaptureView: NSViewRepresentable {
         view.setKeyboardEnabled(isKeyboardEnabled)
         view.setMouseEnabled(isMouseEnabled)
         view.isScrollInverted = isScrollInverted
+        view.allowsKeyRepeat = allowsKeyRepeat
         view.videoSize = videoSize
         view.zoom = zoom
         return view
@@ -32,6 +34,7 @@ struct KeyboardCaptureView: NSViewRepresentable {
         nsView.setKeyboardEnabled(isKeyboardEnabled)
         nsView.setMouseEnabled(isMouseEnabled)
         nsView.isScrollInverted = isScrollInverted
+        nsView.allowsKeyRepeat = allowsKeyRepeat
         nsView.videoSize = videoSize
         nsView.zoom = zoom
     }
@@ -46,6 +49,7 @@ final class CaptureNSView: NSView {
         }
     }
     var isScrollInverted = true
+    var allowsKeyRepeat = false
     var videoSize: CGSize?
     var zoom: ViewerZoomState?
     var onKeyboardReport: (@MainActor (HIDKeyboardReport) -> Void)?
@@ -231,7 +235,11 @@ final class CaptureNSView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
-        guard isKeyboardEnabled, let usage = HIDKeymap.usage(for: event.keyCode) else {
+        guard
+            isKeyboardEnabled,
+            !event.isARepeat || allowsKeyRepeat,
+            let usage = HIDKeymap.usage(for: event.keyCode)
+        else {
             return
         }
         emit(keyboardReportBuilder.keyDown(usage: usage))

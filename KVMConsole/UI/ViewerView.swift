@@ -99,6 +99,7 @@ struct ViewerView: View {
                 isMouseEnabled: model.isStreaming && model.isMouseCaptureEnabled,
                 hidesLocalCursor: hidesLocalCursor,
                 isScrollInverted: model.isScrollInverted,
+                allowsKeyRepeat: allowsKeyRepeat,
                 videoSize: model.videoSize,
                 zoom: model.zoom,
                 onKeyboardReport: { report in model.sendKeyboardReport(report) },
@@ -115,6 +116,10 @@ struct ViewerView: View {
 
     private var hidesLocalCursor: Bool {
         model.device.kvmType != .appleScreenSharing && model.device.kvmType != .vnc
+    }
+
+    private var allowsKeyRepeat: Bool {
+        model.device.kvmType == .appleScreenSharing || model.device.kvmType == .vnc
     }
 
     @ToolbarContentBuilder
@@ -282,6 +287,7 @@ struct ViewerView: View {
         model.isFullscreen = true
         let coord = FullscreenKeyCaptureCoordinator(
             isCapturing: { [model] in model.isKeyboardCaptureEnabled },
+            allowsKeyRepeat: allowsKeyRepeat,
             onKeyboardReport: { [model] report in model.sendKeyboardReport(report) },
             onTripleEscape: { [model] in model.handleTripleEscape() },
             onTopEdgeHover: { revealToolbar() },
