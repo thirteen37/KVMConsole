@@ -106,9 +106,7 @@ public final class RFBSession: KVMSession {
 
     public func sendKeyboardReport(_ report: HIDKeyboardReport) {
         guard let client else { return }
-        Task(priority: .userInitiated) {
-            await client.sendKeyboardReport(report)
-        }
+        client.sendKeyboardReport(report)
     }
 
     public func sendMouseReport(_ report: HIDMouseAbsoluteReport) {

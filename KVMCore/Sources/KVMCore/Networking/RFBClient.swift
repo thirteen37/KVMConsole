@@ -59,12 +59,13 @@ public actor RFBClient {
     }
 
     public func close() {
+        inputSender.cancel()
         writer.close()
         connection = nil
     }
 
-    public nonisolated func sendKeyboardReport(_ report: HIDKeyboardReport) async {
-        await inputSender.sendKeyboardReport(report, writer: writer)
+    public nonisolated func sendKeyboardReport(_ report: HIDKeyboardReport) {
+        inputSender.sendKeyboardReport(report, writer: writer)
     }
 
     public nonisolated func sendMouseReport(_ report: HIDMouseAbsoluteReport) async {
@@ -458,8 +459,23 @@ private final class RFBConnectionWriter: @unchecked Sendable {
 private final class RFBInputSender: @unchecked Sendable {
     private let lock = NSLock()
     private var previousKeyboardReport = HIDKeyboardReport()
+    private var pendingKeyboardReports: [HIDKeyboardReport] = []
+    private var keyboardDrainTask: Task<Void, Never>?
+    private var keyboardDrainGeneration = 0
     private var framebufferWidth = 0
     private var framebufferHeight = 0
+
+    func cancel() {
+        lock.lock()
+        let keyboardDrainTask = keyboardDrainTask
+        keyboardDrainGeneration &+= 1
+        self.keyboardDrainTask = nil
+        pendingKeyboardReports.removeAll()
+        previousKeyboardReport = HIDKeyboardReport()
+        lock.unlock()
+
+        keyboardDrainTask?.cancel()
+    }
 
     func updateFramebufferSize(width: Int, height: Int) {
         lock.lock()
@@ -468,15 +484,34 @@ private final class RFBInputSender: @unchecked Sendable {
         lock.unlock()
     }
 
-    func sendKeyboardReport(_ report: HIDKeyboardReport, writer: RFBConnectionWriter) async {
-        let transitions = keyboardTransitions(to: report)
+    func sendKeyboardReport(_ report: HIDKeyboardReport, writer: RFBConnectionWriter) {
+        lock.lock()
+        pendingKeyboardReports.append(report)
+        if keyboardDrainTask == nil {
+            keyboardDrainGeneration &+= 1
+            let generation = keyboardDrainGeneration
+            keyboardDrainTask = Task(priority: .userInitiated) { [weak self, writer] in
+                await self?.drainKeyboardReports(writer: writer, generation: generation)
+            }
+        }
+        lock.unlock()
+    }
 
-        for transition in transitions {
-            do {
-                try await writer.send(RFBClientMessage.keyEvent(down: transition.isDown, keysym: transition.keysym))
-            } catch {
-                KVMLog.rfb.error("RFB keyboard event send failed: \(error.localizedDescription, privacy: .public)")
-                return
+    private func drainKeyboardReports(writer: RFBConnectionWriter, generation: Int) async {
+        defer {
+            finishKeyboardDrain(generation: generation, clearPendingReports: false)
+        }
+        while !Task.isCancelled {
+            guard let transitions = nextKeyboardTransitions(generation: generation) else { return }
+            for transition in transitions {
+                guard !Task.isCancelled else { return }
+                do {
+                    try await writer.send(RFBClientMessage.keyEvent(down: transition.isDown, keysym: transition.keysym))
+                } catch {
+                    KVMLog.rfb.error("RFB keyboard event send failed: \(error.localizedDescription, privacy: .public)")
+                    finishKeyboardDrain(generation: generation, clearPendingReports: true)
+                    return
+                }
             }
         }
     }
@@ -503,9 +538,16 @@ private final class RFBInputSender: @unchecked Sendable {
         }
     }
 
-    private func keyboardTransitions(to report: HIDKeyboardReport) -> [HIDUsageToX11Keysym.KeyTransition] {
+    private func nextKeyboardTransitions(generation: Int) -> [HIDUsageToX11Keysym.KeyTransition]? {
         lock.lock()
         defer { lock.unlock() }
+        guard generation == keyboardDrainGeneration else { return nil }
+        guard !pendingKeyboardReports.isEmpty else {
+            keyboardDrainTask = nil
+            return nil
+        }
+
+        let report = pendingKeyboardReports.removeFirst()
         let transitions: [HIDUsageToX11Keysym.KeyTransition]
         if report == previousKeyboardReport {
             transitions = HIDUsageToX11Keysym.repeatTransitions(for: report)
@@ -514,6 +556,16 @@ private final class RFBInputSender: @unchecked Sendable {
         }
         previousKeyboardReport = report
         return transitions
+    }
+
+    private func finishKeyboardDrain(generation: Int, clearPendingReports: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard generation == keyboardDrainGeneration else { return }
+        if clearPendingReports {
+            pendingKeyboardReports.removeAll()
+        }
+        keyboardDrainTask = nil
     }
 
     private func framebufferSize() -> (width: Int, height: Int) {
