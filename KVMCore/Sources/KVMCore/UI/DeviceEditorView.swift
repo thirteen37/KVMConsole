@@ -80,31 +80,37 @@ public struct DeviceEditorView: View {
                 }
                 GridRow {
                     Text("Host")
-                    TextField(kvmType == .comet ? "kvm.local" : "nanokvm.local", text: $host)
+                    TextField(hostPlaceholder, text: $host)
                         .textFieldStyle(.roundedBorder)
                 }
-                GridRow {
-                    Text("Scheme")
-                    Picker("Scheme", selection: $scheme) {
-                        Text("HTTP").tag(Device.Scheme.http)
-                        Text("HTTPS").tag(Device.Scheme.https)
+                if showsScheme {
+                    GridRow {
+                        Text("Scheme")
+                        Picker("Scheme", selection: $scheme) {
+                            Text("HTTP").tag(Device.Scheme.http)
+                            Text("HTTPS").tag(Device.Scheme.https)
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                        .frame(width: 160)
                     }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .frame(width: 160)
                 }
-                GridRow {
-                    Text("Port")
-                    TextField("80", text: $port)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 80)
+                if showsPort {
+                    GridRow {
+                        Text("Port")
+                        TextField(portPlaceholder, text: $port)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 80)
+                    }
                 }
-                GridRow {
-                    Text("Username")
-                    TextField("admin", text: $username)
-                        .textFieldStyle(.roundedBorder)
+                if showsUsername {
+                    GridRow {
+                        Text(usernameLabel)
+                        TextField(usernamePlaceholder, text: $username)
+                            .textFieldStyle(.roundedBorder)
+                    }
                 }
-                if kvmType == .comet {
+                if showsTLS {
                     GridRow {
                         Text("TLS")
                         Toggle("Allow self-signed TLS", isOn: $allowsInsecureTLS)
@@ -158,23 +164,56 @@ public struct DeviceEditorView: View {
     private var trimmedHost: String { host.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var trimmedUsername: String { username.trimmingCharacters(in: .whitespacesAndNewlines) }
 
+    private var isRFBType: Bool {
+        kvmType == .appleScreenSharing || kvmType == .vnc
+    }
+
+    private var showsScheme: Bool { !isRFBType }
+    private var showsPort: Bool { kvmType != .appleScreenSharing }
+    private var showsUsername: Bool { kvmType != .vnc }
+    private var showsTLS: Bool { kvmType == .comet }
+
+    private var hostPlaceholder: String {
+        switch kvmType {
+        case .comet: return "kvm.local"
+        case .appleScreenSharing, .vnc: return "<hostname-or-IP>"
+        case .nanoKVMLite, .nanoKVMUSB: return "nanokvm.local"
+        }
+    }
+
+    private var portPlaceholder: String {
+        kvmType == .vnc ? "5900" : "80"
+    }
+
+    private var usernameLabel: String {
+        kvmType == .appleScreenSharing ? "Account" : "Username"
+    }
+
+    private var usernamePlaceholder: String {
+        kvmType == .appleScreenSharing ? "macOS account" : "admin"
+    }
+
     private var isValid: Bool {
-        !trimmedHost.isEmpty && !trimmedUsername.isEmpty && Int(port) != nil
+        let hasRequiredUsername = !showsUsername || !trimmedUsername.isEmpty
+        return !trimmedHost.isEmpty && hasRequiredUsername && (kvmType == .appleScreenSharing || resolvedPortValue != nil)
     }
 
     private func buildDevice() -> Device {
-        let resolvedPort = Int(port) ?? (scheme == .https ? 443 : 80)
+        let resolvedPort = kvmType == .appleScreenSharing ? 5900 : resolvedPortValue ?? defaultPort
         let displayName = trimmedName.isEmpty ? trimmedHost : trimmedName
+        let resolvedUsername = kvmType == .vnc ? "" : trimmedUsername
+        let resolvedScheme = isRFBType ? .http : scheme
+        let resolvedAllowsInsecureTLS = isRFBType ? false : allowsInsecureTLS
         switch mode {
         case .add:
             return Device(
                 name: displayName,
                 host: trimmedHost,
                 port: resolvedPort,
-                scheme: scheme,
-                username: trimmedUsername,
+                scheme: resolvedScheme,
+                username: resolvedUsername,
                 kvmType: kvmType,
-                allowsInsecureTLS: allowsInsecureTLS
+                allowsInsecureTLS: resolvedAllowsInsecureTLS
             )
         case .edit(let existing):
             return Device(
@@ -182,12 +221,24 @@ public struct DeviceEditorView: View {
                 name: displayName,
                 host: trimmedHost,
                 port: resolvedPort,
-                scheme: scheme,
-                username: trimmedUsername,
+                scheme: resolvedScheme,
+                username: resolvedUsername,
                 kvmType: kvmType,
-                allowsInsecureTLS: allowsInsecureTLS,
+                allowsInsecureTLS: resolvedAllowsInsecureTLS,
                 lastConnectedAt: existing.lastConnectedAt
             )
+        }
+    }
+
+    private var resolvedPortValue: Int? {
+        guard let parsed = Int(port), (0...Int(UInt16.max)).contains(parsed) else { return nil }
+        return parsed
+    }
+
+    private var defaultPort: Int {
+        switch kvmType {
+        case .appleScreenSharing, .vnc: return 5900
+        default: return scheme == .https ? 443 : 80
         }
     }
 
@@ -211,7 +262,21 @@ public struct DeviceEditorView: View {
                 port = "443"
             }
             allowsInsecureTLS = true
-        case .appleRFB:
+        case .appleScreenSharing:
+            if host == "nanokvm.local" || host == "kvm.local" {
+                host = ""
+            }
+            scheme = .http
+            port = "5900"
+            allowsInsecureTLS = false
+        case .vnc:
+            if host == "nanokvm.local" || host == "kvm.local" {
+                host = ""
+            }
+            scheme = .http
+            if port == "80" || port == "443" || port.isEmpty {
+                port = "5900"
+            }
             allowsInsecureTLS = false
         }
     }

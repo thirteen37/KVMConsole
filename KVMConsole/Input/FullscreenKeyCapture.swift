@@ -9,6 +9,7 @@ final class FullscreenKeyCaptureCoordinator {
     private static let topEdgeHideZone: CGFloat = 60
 
     private let isCapturing: @MainActor () -> Bool
+    private let allowsKeyRepeat: Bool
     private let onKeyboardReport: @MainActor (HIDKeyboardReport) -> Void
     private let onTripleEscape: @MainActor () -> Void
     private let onTopEdgeHover: @MainActor () -> Void
@@ -23,12 +24,14 @@ final class FullscreenKeyCaptureCoordinator {
 
     init(
         isCapturing: @escaping @MainActor () -> Bool,
+        allowsKeyRepeat: Bool,
         onKeyboardReport: @escaping @MainActor (HIDKeyboardReport) -> Void,
         onTripleEscape: @escaping @MainActor () -> Void,
         onTopEdgeHover: @escaping @MainActor () -> Void,
         onTopEdgeLeft: @escaping @MainActor () -> Void
     ) {
         self.isCapturing = isCapturing
+        self.allowsKeyRepeat = allowsKeyRepeat
         self.onKeyboardReport = onKeyboardReport
         self.onTripleEscape = onTripleEscape
         self.onTopEdgeHover = onTopEdgeHover
@@ -84,7 +87,7 @@ final class FullscreenKeyCaptureCoordinator {
 
         guard isCapturing() else { return event }
 
-        if event.type == .keyDown, event.keyCode == Self.escapeKeyCode {
+        if event.type == .keyDown, !event.isARepeat, event.keyCode == Self.escapeKeyCode {
             if escapeDetector.register(at: Date()) {
                 escapeDetector.reset()
                 onTripleEscape()
@@ -110,7 +113,8 @@ final class FullscreenKeyCaptureCoordinator {
     private func report(for event: NSEvent) -> HIDKeyboardReport? {
         switch event.type {
         case .keyDown:
-            guard !event.isARepeat, let usage = HIDKeymap.usage(for: event.keyCode) else { return nil }
+            guard !event.isARepeat || allowsKeyRepeat else { return nil }
+            guard let usage = HIDKeymap.usage(for: event.keyCode) else { return nil }
             return builder.keyDown(usage: usage)
         case .keyUp:
             guard let usage = HIDKeymap.usage(for: event.keyCode) else { return nil }

@@ -7,14 +7,37 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
         case nanoKVMLite
         case nanoKVMUSB
         case comet
-        case appleRFB
+        case appleScreenSharing
+        case vnc
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let rawValue = try container.decode(String.self)
+            if rawValue == "appleRFB" {
+                self = .appleScreenSharing
+                return
+            }
+            guard let value = Self(rawValue: rawValue) else {
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Invalid KVM type '\(rawValue)'"
+                )
+            }
+            self = value
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(rawValue)
+        }
 
         public var displayName: String {
             switch self {
             case .nanoKVMLite: return "NanoKVM Lite"
             case .nanoKVMUSB: return "NanoKVM USB"
             case .comet: return "GL.iNet Comet"
-            case .appleRFB: return "Apple Screen Sharing"
+            case .appleScreenSharing: return "Apple Screen Sharing"
+            case .vnc: return "VNC"
             }
         }
 
@@ -27,7 +50,8 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
             switch self {
             case .nanoKVMLite, .nanoKVMUSB: return .bundledAsset("sipeed")
             case .comet: return .bundledAsset("glinet")
-            case .appleRFB: return .systemSymbol("apple.logo")
+            case .appleScreenSharing: return .systemSymbol("apple.logo")
+            case .vnc: return .systemSymbol("network")
             }
         }
     }

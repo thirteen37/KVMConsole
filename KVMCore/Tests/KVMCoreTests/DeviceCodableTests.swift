@@ -39,4 +39,22 @@ final class DeviceCodableTests: XCTestCase {
 
         XCTAssertEqual(device.kvmType, .comet)
     }
+
+    func test_decodesLegacyAppleRFBAsAppleScreenSharing() throws {
+        let json = """
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "Mac",
+          "host": "mac.local",
+          "port": 5900,
+          "scheme": "http",
+          "username": "yuxi",
+          "kvmType": "appleRFB"
+        }
+        """
+
+        let device = try JSONDecoder().decode(Device.self, from: Data(json.utf8))
+
+        XCTAssertEqual(device.kvmType, .appleScreenSharing)
+    }
 }
