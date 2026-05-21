@@ -129,16 +129,13 @@ public enum RFBSecurityPreference: Equatable, Sendable {
 
 public struct RFBSessionProfile: Equatable, Sendable {
     public let securityPreference: RFBSecurityPreference
-    public let enablesContinuousUpdates: Bool
 
     public static let appleScreenSharing = RFBSessionProfile(
-        securityPreference: .appleScreenSharing,
-        enablesContinuousUpdates: false
+        securityPreference: .appleScreenSharing
     )
 
     public static let vnc = RFBSessionProfile(
-        securityPreference: .vnc,
-        enablesContinuousUpdates: false
+        securityPreference: .vnc
     )
 }
 
@@ -225,12 +222,10 @@ public struct RFBPixelFormat: Equatable, Sendable {
 public enum RFBEncoding: Int32, Sendable {
     case raw = 0
     case copyRect = 1
-    case tight = 7
     case zrle = 16
     case desktopSize = -223
     case lastRect = -224
     case fence = -312
-    case continuousUpdates = -313
 }
 
 public enum RFBClientMessage {
@@ -281,23 +276,6 @@ public enum RFBClientMessage {
         writer.writeUInt8(buttonMask)
         writer.writeUInt16(x)
         writer.writeUInt16(y)
-        return writer.data
-    }
-
-    public static func enableContinuousUpdates(
-        enabled: Bool,
-        x: UInt16,
-        y: UInt16,
-        width: UInt16,
-        height: UInt16
-    ) -> Data {
-        var writer = RFBByteWriter()
-        writer.writeUInt8(150)
-        writer.writeUInt8(enabled ? 1 : 0)
-        writer.writeUInt16(x)
-        writer.writeUInt16(y)
-        writer.writeUInt16(width)
-        writer.writeUInt16(height)
         return writer.data
     }
 

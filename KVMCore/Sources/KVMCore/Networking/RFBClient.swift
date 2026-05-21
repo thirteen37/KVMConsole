@@ -20,8 +20,6 @@ public actor RFBClient {
 
     private var connection: NWConnection?
     private var zrleDecoder: RFBZRLEDecoder?
-    private var continuousUpdatesSupported = false
-    private var continuousUpdatesEnabled = false
     private var receiveTimeoutSeconds: TimeInterval?
 
     public init(
@@ -221,8 +219,6 @@ public actor RFBClient {
                 break
             case 3:
                 try await skipServerCutText()
-            case 150:
-                try await handleEndOfContinuousUpdates()
             case 248:
                 try await handleServerFence()
             default:
@@ -237,9 +233,7 @@ public actor RFBClient {
         try headerReader.skip(1)
         let rectangleCount = Int(try headerReader.readUInt16())
 
-        if !continuousUpdatesEnabled {
-            try await sendFullUpdateRequest(incremental: true)
-        }
+        try await sendFullUpdateRequest(incremental: true)
 
         var shouldEmitFrame = false
         rectangleLoop: for _ in 0..<rectangleCount {
@@ -307,20 +301,6 @@ public actor RFBClient {
         }
     }
 
-    private func handleEndOfContinuousUpdates() async throws {
-        let hadSupport = continuousUpdatesSupported
-        continuousUpdatesSupported = true
-        guard !hadSupport else { return }
-
-        continuousUpdatesEnabled = false
-        if profile.enablesContinuousUpdates {
-            try await sendEnableContinuousUpdates(enabled: true)
-            continuousUpdatesEnabled = true
-        } else {
-            try await sendFullUpdateRequest(incremental: true)
-        }
-    }
-
     private func handleServerFence() async throws {
         let data = try await readExact(byteCount: 8)
         var reader = RFBByteReader(data)
@@ -334,17 +314,6 @@ public actor RFBClient {
     private func sendFullUpdateRequest(incremental: Bool) async throws {
         let request = RFBClientMessage.framebufferUpdateRequest(
             incremental: incremental,
-            x: 0,
-            y: 0,
-            width: UInt16(max(0, min(Int(UInt16.max), framebuffer.width))),
-            height: UInt16(max(0, min(Int(UInt16.max), framebuffer.height)))
-        )
-        try await send(request)
-    }
-
-    private func sendEnableContinuousUpdates(enabled: Bool) async throws {
-        let request = RFBClientMessage.enableContinuousUpdates(
-            enabled: enabled,
             x: 0,
             y: 0,
             width: UInt16(max(0, min(Int(UInt16.max), framebuffer.width))),
@@ -531,8 +500,10 @@ private final class RFBInputSender: @unchecked Sendable {
             }
 
             let wheelMask: UInt8 = report.wheel > 0 ? 0x08 : 0x10
-            try await writer.send(RFBClientMessage.pointerEvent(buttonMask: baseMask | wheelMask, x: x, y: y))
-            try await writer.send(RFBClientMessage.pointerEvent(buttonMask: baseMask, x: x, y: y))
+            for _ in 0..<abs(Int(report.wheel)) {
+                try await writer.send(RFBClientMessage.pointerEvent(buttonMask: baseMask | wheelMask, x: x, y: y))
+                try await writer.send(RFBClientMessage.pointerEvent(buttonMask: baseMask, x: x, y: y))
+            }
         } catch {
             KVMLog.rfb.error("RFB pointer event send failed: \(error.localizedDescription, privacy: .public)")
         }

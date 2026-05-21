@@ -49,18 +49,6 @@ final class RFBProtocolTests: XCTestCase {
         XCTAssertEqual(Array(data), [3, 1, 0, 1, 0, 2, 2, 128, 1, 224])
     }
 
-    func test_enableContinuousUpdatesWireShape() {
-        let data = RFBClientMessage.enableContinuousUpdates(
-            enabled: true,
-            x: 1,
-            y: 2,
-            width: 640,
-            height: 480
-        )
-
-        XCTAssertEqual(Array(data), [150, 1, 0, 1, 0, 2, 2, 128, 1, 224])
-    }
-
     func test_endpointPortFallsBackToRFBForOutOfRangeValues() {
         XCTAssertEqual(RFBClient.endpointPort(from: 5901), NWEndpoint.Port(rawValue: 5901)!)
         XCTAssertEqual(RFBClient.endpointPort(from: 99_999), NWEndpoint.Port(rawValue: 5900)!)
@@ -88,8 +76,4 @@ final class RFBProtocolTests: XCTestCase {
         )
     }
 
-    func test_profilesDoNotEnableContinuousUpdatesByDefault() {
-        XCTAssertFalse(RFBSessionProfile.appleScreenSharing.enablesContinuousUpdates)
-        XCTAssertFalse(RFBSessionProfile.vnc.enablesContinuousUpdates)
-    }
 }
