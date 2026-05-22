@@ -15,6 +15,12 @@ public final class RFBZRLEDecoder: @unchecked Sendable {
     }
 
     public func apply(rect: RFBRectangle, compressedData: Data, to writer: RFBFramebuffer.Writer) throws {
+        // Bounds-check the rect before any pointer arithmetic — the
+        // direct-write path doesn't go through applyRaw/applyBGR anymore,
+        // so without this a malformed or oversized rectangle would write
+        // past the CVPixelBuffer allocation.
+        try writer.validate(rect: rect)
+
         let expected = Int(rect.width) * Int(rect.height) * 4 + 4096
         let data = try inflater.inflate(compressedData, expectedByteCount: expected)
         var reader = RFBByteReader(data)

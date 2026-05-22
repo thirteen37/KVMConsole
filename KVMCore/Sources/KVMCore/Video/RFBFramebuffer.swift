@@ -326,6 +326,15 @@ extension RFBFramebuffer {
             }
         }
 
+        public func validate(rect: RFBRectangle) throws {
+            try validateRect(
+                x: Int(rect.x),
+                y: Int(rect.y),
+                width: Int(rect.width),
+                height: Int(rect.height)
+            )
+        }
+
         private func validateRect(x: Int, y: Int, width: Int, height: Int) throws {
             guard
                 x >= 0,
