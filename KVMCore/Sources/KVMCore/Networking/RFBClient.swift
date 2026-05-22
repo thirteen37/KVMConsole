@@ -236,7 +236,10 @@ public actor RFBClient {
 
         try await sendFullUpdateRequest(incremental: true)
 
-        var shouldEmitFrame = false
+        // Buffer every rectangle's metadata + payload first so the actual
+        // pixel writes happen inside a single CVPixelBuffer lock below.
+        // This also keeps the lock off the network read path.
+        var rectangles: [PendingRectangle] = []
         rectangleLoop: for _ in 0..<rectangleCount {
             let rectangleHeader = try await readExact(byteCount: 12)
             var rectangleReader = RFBByteReader(rectangleHeader)
@@ -244,15 +247,13 @@ public actor RFBClient {
             switch rectangle.encoding {
             case RFBEncoding.raw.rawValue:
                 let bytes = try await readExact(byteCount: Int(rectangle.width) * Int(rectangle.height) * 4)
-                try framebuffer.applyRaw(rect: rectangle, bytes: bytes)
-                shouldEmitFrame = true
+                rectangles.append(.raw(rectangle, bytes))
             case RFBEncoding.copyRect.rawValue:
                 let payload = try await readExact(byteCount: 4)
                 var copyReader = RFBByteReader(payload)
                 let sourceX = try copyReader.readUInt16()
                 let sourceY = try copyReader.readUInt16()
-                try framebuffer.applyCopyRect(rect: rectangle, sourceX: sourceX, sourceY: sourceY)
-                shouldEmitFrame = true
+                rectangles.append(.copy(rectangle, sourceX, sourceY))
             case RFBEncoding.zrle.rawValue:
                 let lengthData = try await readExact(byteCount: 4)
                 var lengthReader = RFBByteReader(lengthData)
@@ -261,8 +262,7 @@ public actor RFBClient {
                 if zrleDecoder == nil {
                     zrleDecoder = try RFBZRLEDecoder()
                 }
-                try zrleDecoder?.apply(rect: rectangle, compressedData: compressedData, to: framebuffer)
-                shouldEmitFrame = true
+                rectangles.append(.zrle(rectangle, compressedData))
             case RFBEncoding.desktopSize.rawValue:
                 try framebuffer.resize(width: Int(rectangle.width), height: Int(rectangle.height))
                 inputSender.updateFramebufferSize(width: Int(rectangle.width), height: Int(rectangle.height))
@@ -275,10 +275,29 @@ public actor RFBClient {
             }
         }
 
-        if shouldEmitFrame {
-            let sampleBuffer = try framebuffer.makeSampleBuffer(wireArrivalHostTime: wireArrivalHostTime)
-            onSampleBuffer(sampleBuffer)
+        if rectangles.isEmpty { return }
+
+        try framebuffer.withLockedBuffer { writer in
+            for entry in rectangles {
+                switch entry {
+                case .raw(let rect, let bytes):
+                    try writer.applyRaw(rect: rect, bytes: bytes)
+                case .copy(let rect, let sourceX, let sourceY):
+                    try writer.applyCopyRect(rect: rect, sourceX: sourceX, sourceY: sourceY)
+                case .zrle(let rect, let compressedData):
+                    try zrleDecoder?.apply(rect: rect, compressedData: compressedData, to: writer)
+                }
+            }
         }
+
+        let sampleBuffer = try framebuffer.makeSampleBuffer(wireArrivalHostTime: wireArrivalHostTime)
+        onSampleBuffer(sampleBuffer)
+    }
+
+    private enum PendingRectangle {
+        case raw(RFBRectangle, Data)
+        case copy(RFBRectangle, UInt16, UInt16)
+        case zrle(RFBRectangle, Data)
     }
 
     private func skipSetColourMapEntries() async throws {

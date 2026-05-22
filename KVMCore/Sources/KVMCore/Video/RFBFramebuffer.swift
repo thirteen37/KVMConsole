@@ -58,132 +58,47 @@ public final class RFBFramebuffer: @unchecked Sendable {
         self.formatDescription = newFormatDescription
     }
 
-    public func applyRaw(rect: RFBRectangle, bytes: Data) throws {
+    /// Locks the framebuffer once and exposes a `Writer` that aggregates
+    /// rectangle writes for the duration of an RFB framebuffer-update
+    /// message. The hot path uses this so we incur a single
+    /// `CVPixelBufferLockBaseAddress` / `Unlock` pair per update instead of
+    /// one per rectangle.
+    public func withLockedBuffer<R>(_ body: (Writer) throws -> R) throws -> R {
         guard let pixelBuffer else {
             throw RFBError.malformedMessage("framebuffer is not initialized")
         }
-        let x = Int(rect.x)
-        let y = Int(rect.y)
-        let rectWidth = Int(rect.width)
-        let rectHeight = Int(rect.height)
-        try validateRect(x: x, y: y, width: rectWidth, height: rectHeight)
-
-        let expectedByteCount = rectWidth * rectHeight * 4
-        guard bytes.count == expectedByteCount else {
-            throw RFBError.malformedMessage("raw rectangle has \(bytes.count) bytes; expected \(expectedByteCount)")
-        }
-
         CVPixelBufferLockBaseAddress(pixelBuffer, [])
         defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, []) }
         guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
             throw RFBError.malformedMessage("framebuffer has no base address")
         }
+        let writer = Writer(
+            baseAddress: baseAddress,
+            bytesPerRow: CVPixelBufferGetBytesPerRow(pixelBuffer),
+            width: width,
+            height: height
+        )
+        return try body(writer)
+    }
 
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
-        bytes.withUnsafeBytes { source in
-            guard let sourceBase = source.baseAddress else { return }
-            for row in 0..<rectHeight {
-                let destination = baseAddress
-                    .advanced(by: (y + row) * bytesPerRow + x * 4)
-                let rowSource = sourceBase.advanced(by: row * rectWidth * 4)
-                memcpy(destination, rowSource, rectWidth * 4)
-            }
-        }
+    public func applyRaw(rect: RFBRectangle, bytes: Data) throws {
+        try withLockedBuffer { try $0.applyRaw(rect: rect, bytes: bytes) }
     }
 
     public func applyBGR(rect: RFBRectangle, bytes: Data) throws {
-        let pixelCount = Int(rect.width) * Int(rect.height)
-        guard bytes.count == pixelCount * 3 else {
-            throw RFBError.malformedMessage("BGR rectangle has \(bytes.count) bytes; expected \(pixelCount * 3)")
-        }
-        var bgra = Data(count: pixelCount * 4)
-        bgra.withUnsafeMutableBytes { destination in
-            bytes.withUnsafeBytes { source in
-                guard let destinationBase = destination.baseAddress?.assumingMemoryBound(to: UInt8.self),
-                      let sourceBase = source.baseAddress?.assumingMemoryBound(to: UInt8.self)
-                else { return }
-                for index in 0..<pixelCount {
-                    destinationBase[index * 4] = sourceBase[index * 3]
-                    destinationBase[index * 4 + 1] = sourceBase[index * 3 + 1]
-                    destinationBase[index * 4 + 2] = sourceBase[index * 3 + 2]
-                    destinationBase[index * 4 + 3] = 0
-                }
-            }
-        }
-        try applyRaw(rect: rect, bytes: bgra)
+        try withLockedBuffer { try $0.applyBGR(rect: rect, bytes: bytes) }
     }
 
     public func applyRGB(rect: RFBRectangle, bytes: Data) throws {
-        let pixelCount = Int(rect.width) * Int(rect.height)
-        guard bytes.count == pixelCount * 3 else {
-            throw RFBError.malformedMessage("RGB rectangle has \(bytes.count) bytes; expected \(pixelCount * 3)")
-        }
-        var bgra = Data(count: pixelCount * 4)
-        bgra.withUnsafeMutableBytes { destination in
-            bytes.withUnsafeBytes { source in
-                guard let destinationBase = destination.baseAddress?.assumingMemoryBound(to: UInt8.self),
-                      let sourceBase = source.baseAddress?.assumingMemoryBound(to: UInt8.self)
-                else { return }
-                for index in 0..<pixelCount {
-                    destinationBase[index * 4] = sourceBase[index * 3 + 2]
-                    destinationBase[index * 4 + 1] = sourceBase[index * 3 + 1]
-                    destinationBase[index * 4 + 2] = sourceBase[index * 3]
-                    destinationBase[index * 4 + 3] = 0
-                }
-            }
-        }
-        try applyRaw(rect: rect, bytes: bgra)
+        try withLockedBuffer { try $0.applyRGB(rect: rect, bytes: bytes) }
     }
 
     public func fill(rect: RFBRectangle, bgra: (UInt8, UInt8, UInt8, UInt8)) throws {
-        let pixelCount = Int(rect.width) * Int(rect.height)
-        var bytes = Data(count: pixelCount * 4)
-        bytes.withUnsafeMutableBytes { buffer in
-            guard let base = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
-            for index in 0..<pixelCount {
-                base[index * 4] = bgra.0
-                base[index * 4 + 1] = bgra.1
-                base[index * 4 + 2] = bgra.2
-                base[index * 4 + 3] = bgra.3
-            }
-        }
-        try applyRaw(rect: rect, bytes: bytes)
+        try withLockedBuffer { try $0.fill(rect: rect, bgra: bgra) }
     }
 
     public func applyCopyRect(rect: RFBRectangle, sourceX: UInt16, sourceY: UInt16) throws {
-        guard let pixelBuffer else {
-            throw RFBError.malformedMessage("framebuffer is not initialized")
-        }
-        let destinationX = Int(rect.x)
-        let destinationY = Int(rect.y)
-        let sourceX = Int(sourceX)
-        let sourceY = Int(sourceY)
-        let rectWidth = Int(rect.width)
-        let rectHeight = Int(rect.height)
-        try validateRect(x: destinationX, y: destinationY, width: rectWidth, height: rectHeight)
-        try validateRect(x: sourceX, y: sourceY, width: rectWidth, height: rectHeight)
-
-        CVPixelBufferLockBaseAddress(pixelBuffer, [])
-        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, []) }
-        guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
-            throw RFBError.malformedMessage("framebuffer has no base address")
-        }
-
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
-        var scratch = Data(count: rectWidth * rectHeight * 4)
-        scratch.withUnsafeMutableBytes { scratchBuffer in
-            guard let scratchBase = scratchBuffer.baseAddress else { return }
-            for row in 0..<rectHeight {
-                let source = baseAddress.advanced(by: (sourceY + row) * bytesPerRow + sourceX * 4)
-                let destination = scratchBase.advanced(by: row * rectWidth * 4)
-                memcpy(destination, source, rectWidth * 4)
-            }
-            for row in 0..<rectHeight {
-                let source = scratchBase.advanced(by: row * rectWidth * 4)
-                let destination = baseAddress.advanced(by: (destinationY + row) * bytesPerRow + destinationX * 4)
-                memcpy(destination, source, rectWidth * 4)
-            }
-        }
+        try withLockedBuffer { try $0.applyCopyRect(rect: rect, sourceX: sourceX, sourceY: sourceY) }
     }
 
     public func makeSampleBuffer(wireArrivalHostTime: CMTime? = nil) throws -> CMSampleBuffer {
@@ -257,17 +172,171 @@ public final class RFBFramebuffer: @unchecked Sendable {
         }
         return data
     }
+}
 
-    private func validateRect(x: Int, y: Int, width: Int, height: Int) throws {
-        guard
-            x >= 0,
-            y >= 0,
-            width >= 0,
-            height >= 0,
-            x + width <= self.width,
-            y + height <= self.height
-        else {
-            throw RFBError.malformedMessage("rectangle is outside framebuffer")
+extension RFBFramebuffer {
+    /// Direct access to the live BGRA pixel buffer for the duration of a
+    /// `withLockedBuffer` body. Decoders write through this to skip the
+    /// per-rectangle locks and intermediate `Data` allocations that the
+    /// pre-optimization code path used.
+    public struct Writer {
+        public let baseAddress: UnsafeMutableRawPointer
+        public let bytesPerRow: Int
+        public let width: Int
+        public let height: Int
+
+        init(baseAddress: UnsafeMutableRawPointer, bytesPerRow: Int, width: Int, height: Int) {
+            self.baseAddress = baseAddress
+            self.bytesPerRow = bytesPerRow
+            self.width = width
+            self.height = height
+        }
+
+        public func applyRaw(rect: RFBRectangle, bytes: Data) throws {
+            let x = Int(rect.x)
+            let y = Int(rect.y)
+            let rectWidth = Int(rect.width)
+            let rectHeight = Int(rect.height)
+            try validateRect(x: x, y: y, width: rectWidth, height: rectHeight)
+
+            let expectedByteCount = rectWidth * rectHeight * 4
+            guard bytes.count == expectedByteCount else {
+                throw RFBError.malformedMessage("raw rectangle has \(bytes.count) bytes; expected \(expectedByteCount)")
+            }
+
+            bytes.withUnsafeBytes { source in
+                guard let sourceBase = source.baseAddress else { return }
+                for row in 0..<rectHeight {
+                    let destination = baseAddress.advanced(by: (y + row) * bytesPerRow + x * 4)
+                    let rowSource = sourceBase.advanced(by: row * rectWidth * 4)
+                    memcpy(destination, rowSource, rectWidth * 4)
+                }
+            }
+        }
+
+        public func applyBGR(rect: RFBRectangle, bytes: Data) throws {
+            let x = Int(rect.x)
+            let y = Int(rect.y)
+            let rectWidth = Int(rect.width)
+            let rectHeight = Int(rect.height)
+            try validateRect(x: x, y: y, width: rectWidth, height: rectHeight)
+
+            let pixelCount = rectWidth * rectHeight
+            guard bytes.count == pixelCount * 3 else {
+                throw RFBError.malformedMessage("BGR rectangle has \(bytes.count) bytes; expected \(pixelCount * 3)")
+            }
+
+            bytes.withUnsafeBytes { source in
+                guard let sourceBase = source.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
+                for row in 0..<rectHeight {
+                    let destinationRow = baseAddress
+                        .advanced(by: (y + row) * bytesPerRow + x * 4)
+                        .assumingMemoryBound(to: UInt8.self)
+                    let sourceRow = sourceBase.advanced(by: row * rectWidth * 3)
+                    for col in 0..<rectWidth {
+                        destinationRow[col * 4]     = sourceRow[col * 3]
+                        destinationRow[col * 4 + 1] = sourceRow[col * 3 + 1]
+                        destinationRow[col * 4 + 2] = sourceRow[col * 3 + 2]
+                        destinationRow[col * 4 + 3] = 0
+                    }
+                }
+            }
+        }
+
+        public func applyRGB(rect: RFBRectangle, bytes: Data) throws {
+            let x = Int(rect.x)
+            let y = Int(rect.y)
+            let rectWidth = Int(rect.width)
+            let rectHeight = Int(rect.height)
+            try validateRect(x: x, y: y, width: rectWidth, height: rectHeight)
+
+            let pixelCount = rectWidth * rectHeight
+            guard bytes.count == pixelCount * 3 else {
+                throw RFBError.malformedMessage("RGB rectangle has \(bytes.count) bytes; expected \(pixelCount * 3)")
+            }
+
+            bytes.withUnsafeBytes { source in
+                guard let sourceBase = source.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
+                for row in 0..<rectHeight {
+                    let destinationRow = baseAddress
+                        .advanced(by: (y + row) * bytesPerRow + x * 4)
+                        .assumingMemoryBound(to: UInt8.self)
+                    let sourceRow = sourceBase.advanced(by: row * rectWidth * 3)
+                    for col in 0..<rectWidth {
+                        destinationRow[col * 4]     = sourceRow[col * 3 + 2]
+                        destinationRow[col * 4 + 1] = sourceRow[col * 3 + 1]
+                        destinationRow[col * 4 + 2] = sourceRow[col * 3]
+                        destinationRow[col * 4 + 3] = 0
+                    }
+                }
+            }
+        }
+
+        public func fill(rect: RFBRectangle, bgra: (UInt8, UInt8, UInt8, UInt8)) throws {
+            let x = Int(rect.x)
+            let y = Int(rect.y)
+            let rectWidth = Int(rect.width)
+            let rectHeight = Int(rect.height)
+            try validateRect(x: x, y: y, width: rectWidth, height: rectHeight)
+
+            var pattern: UInt32 =
+                UInt32(bgra.0)
+                | (UInt32(bgra.1) << 8)
+                | (UInt32(bgra.2) << 16)
+                | (UInt32(bgra.3) << 24)
+            for row in 0..<rectHeight {
+                let destination = baseAddress.advanced(by: (y + row) * bytesPerRow + x * 4)
+                memset_pattern4(destination, &pattern, rectWidth * 4)
+            }
+        }
+
+        public func applyCopyRect(rect: RFBRectangle, sourceX: UInt16, sourceY: UInt16) throws {
+            let destinationX = Int(rect.x)
+            let destinationY = Int(rect.y)
+            let srcX = Int(sourceX)
+            let srcY = Int(sourceY)
+            let rectWidth = Int(rect.width)
+            let rectHeight = Int(rect.height)
+            try validateRect(x: destinationX, y: destinationY, width: rectWidth, height: rectHeight)
+            try validateRect(x: srcX, y: srcY, width: rectWidth, height: rectHeight)
+
+            // Detect overlap. If destination and source ranges don't overlap on
+            // either axis we can plain `memcpy`. Otherwise pick a row iteration
+            // direction that doesn't clobber rows we still need to read, and
+            // use `memmove` (handles within-row overlap).
+            let columnsOverlap = destinationX < srcX + rectWidth && srcX < destinationX + rectWidth
+            let rowsOverlap = destinationY < srcY + rectHeight && srcY < destinationY + rectHeight
+
+            if !(columnsOverlap && rowsOverlap) {
+                for row in 0..<rectHeight {
+                    let source = baseAddress.advanced(by: (srcY + row) * bytesPerRow + srcX * 4)
+                    let destination = baseAddress.advanced(by: (destinationY + row) * bytesPerRow + destinationX * 4)
+                    memcpy(destination, source, rectWidth * 4)
+                }
+                return
+            }
+
+            let rows: StrideThrough<Int> = destinationY > srcY
+                ? stride(from: rectHeight - 1, through: 0, by: -1)
+                : stride(from: 0, through: rectHeight - 1, by: 1)
+            for row in rows {
+                let source = baseAddress.advanced(by: (srcY + row) * bytesPerRow + srcX * 4)
+                let destination = baseAddress.advanced(by: (destinationY + row) * bytesPerRow + destinationX * 4)
+                memmove(destination, source, rectWidth * 4)
+            }
+        }
+
+        private func validateRect(x: Int, y: Int, width: Int, height: Int) throws {
+            guard
+                x >= 0,
+                y >= 0,
+                width >= 0,
+                height >= 0,
+                x + width <= self.width,
+                y + height <= self.height
+            else {
+                throw RFBError.malformedMessage("rectangle is outside framebuffer")
+            }
         }
     }
 }

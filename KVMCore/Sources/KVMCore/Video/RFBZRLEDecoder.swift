@@ -9,6 +9,12 @@ public final class RFBZRLEDecoder: @unchecked Sendable {
     }
 
     public func apply(rect: RFBRectangle, compressedData: Data, to framebuffer: RFBFramebuffer) throws {
+        try framebuffer.withLockedBuffer { writer in
+            try apply(rect: rect, compressedData: compressedData, to: writer)
+        }
+    }
+
+    public func apply(rect: RFBRectangle, compressedData: Data, to writer: RFBFramebuffer.Writer) throws {
         let expected = Int(rect.width) * Int(rect.height) * 4 + 4096
         let data = try inflater.inflate(compressedData, expectedByteCount: expected)
         var reader = RFBByteReader(data)
@@ -33,7 +39,7 @@ public final class RFBZRLEDecoder: @unchecked Sendable {
             }
         }
 
-        try framebuffer.applyBGR(rect: rect, bytes: output)
+        try writer.applyBGR(rect: rect, bytes: output)
     }
 
     private func decodeTile(
