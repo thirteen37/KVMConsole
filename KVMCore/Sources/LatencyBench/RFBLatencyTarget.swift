@@ -77,7 +77,7 @@ final class RFBLatencyTarget: LatencyTarget {
         while await videoSizeBox.value == nil {
             if Date() > deadline {
                 task.cancel()
-                throw RFBLatencyTargetError.connectTimedOut
+                throw RFBLatencyTargetError.connectTimedOut(host: device.host, port: device.port)
             }
             try await Task.sleep(nanoseconds: 50_000_000)
             if task.isCancelled { throw CancellationError() }
@@ -94,15 +94,24 @@ final class RFBLatencyTarget: LatencyTarget {
         runTask = nil
     }
 
+    func sendMouseReport(_ report: HIDMouseAbsoluteReport) async {
+        guard let client else { return }
+        await client.sendMouseReport(report)
+    }
+
+    func sendKeyboardReport(_ report: HIDKeyboardReport) async {
+        guard let client else { return }
+        client.sendKeyboardReport(report)
+    }
 }
 
 enum RFBLatencyTargetError: Error, LocalizedError {
-    case connectTimedOut
+    case connectTimedOut(host: String, port: Int)
 
     var errorDescription: String? {
         switch self {
-        case .connectTimedOut:
-            return "Timed out waiting for RFB framebuffer size announcement."
+        case .connectTimedOut(let host, let port):
+            return "Timed out waiting for RFB framebuffer size announcement from \(host):\(port). Apple Screen Sharing usually listens on port 5900."
         }
     }
 }

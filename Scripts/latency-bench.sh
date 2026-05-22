@@ -10,6 +10,7 @@
 # Usage: ./Scripts/latency-bench.sh <subcommand> [options...]
 #   ./Scripts/latency-bench.sh list
 #   ./Scripts/latency-bench.sh video --device "MacBook"
+#   ./Scripts/latency-bench.sh input --device "MacBook"
 set -euo pipefail
 
 repo_root="${0:A:h:h}"

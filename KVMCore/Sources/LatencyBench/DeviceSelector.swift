@@ -99,7 +99,14 @@ enum DeviceSelector {
             )
         }
 
-        return Selection(device: device, password: password, passwordAccount: account)
+        let normalizedDevice = normalizedForBench(device)
+        if normalizedDevice.port != device.port {
+            FileHandle.standardError.write(Data(
+                "Using \(normalizedDevice.kvmType.displayName) default port \(normalizedDevice.port) instead of saved port \(device.port).\n".utf8
+            ))
+        }
+
+        return Selection(device: normalizedDevice, password: password, passwordAccount: account)
     }
 
     private static func matchSaved(identifier: String, in devices: [Device]) -> Device? {
@@ -114,6 +121,18 @@ enum DeviceSelector {
             return match
         }
         return devices.first(where: { $0.host.lowercased() == lowered })
+    }
+
+    private static func normalizedForBench(_ device: Device) -> Device {
+        guard device.port == 80 else { return device }
+        switch device.kvmType {
+        case .appleScreenSharing, .vnc:
+            var copy = device
+            copy.port = 5900
+            return copy
+        default:
+            return device
+        }
     }
 }
 
