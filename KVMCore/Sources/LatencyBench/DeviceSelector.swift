@@ -16,14 +16,59 @@ enum DeviceSelector {
         let passwordAccount: String
     }
 
-    @MainActor
-    static func listSavedDevices() -> [Device] {
-        SavedDevicesStore().devices
+    /// Candidate `devices.json` paths in priority order. KVM Console is
+    /// sandboxed, so its `devices.json` lives inside the app container —
+    /// reading it requires Full Disk Access on the terminal running the
+    /// bench. The user-level Application Support path is checked as a
+    /// fallback for unsandboxed dev builds.
+    static func candidateStoreURLs(override: URL? = nil) -> [URL] {
+        var urls: [URL] = []
+        if let override { urls.append(override) }
+
+        let fileManager = FileManager.default
+        let home = fileManager.homeDirectoryForCurrentUser
+        urls.append(
+            home.appendingPathComponent(
+                "Library/Containers/io.lyx.KVMConsole/Data/Library/Application Support/io.lyx.KVMConsole/devices.json"
+            )
+        )
+        if let appSupport = try? fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: false
+        ) {
+            urls.append(
+                appSupport
+                    .appendingPathComponent("io.lyx.KVMConsole", isDirectory: true)
+                    .appendingPathComponent("devices.json", isDirectory: false)
+            )
+        }
+        return urls
+    }
+
+    /// Picks the first candidate `devices.json` that exists and is readable.
+    /// Returns nil if none are.
+    static func resolveStoreURL(override: URL? = nil) -> URL? {
+        candidateStoreURLs(override: override).first(where: { url in
+            FileManager.default.isReadableFile(atPath: url.path)
+        })
     }
 
     @MainActor
-    static func resolve(identifier: String?, requireKVMType: Set<Device.KVMType>?) throws -> Selection {
-        let store = SavedDevicesStore()
+    static func listSavedDevices(storeURL: URL? = nil) -> [Device] {
+        let url = resolveStoreURL(override: storeURL)
+        return SavedDevicesStore(storeURL: url).devices
+    }
+
+    @MainActor
+    static func resolve(
+        identifier: String?,
+        requireKVMType: Set<Device.KVMType>?,
+        storeURL: URL? = nil
+    ) throws -> Selection {
+        let resolved = resolveStoreURL(override: storeURL)
+        let store = SavedDevicesStore(storeURL: resolved)
         let passwordStore = KeychainPasswordStore()
 
         let device: Device

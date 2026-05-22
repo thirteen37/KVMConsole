@@ -13,7 +13,7 @@ struct BenchCLI {
         do {
             switch subcommand {
             case "list":
-                try runList()
+                try runList(args: Array(args.dropFirst()))
             case "video":
                 try await runVideo(args: Array(args.dropFirst()))
             case "input":
@@ -38,8 +38,13 @@ struct BenchCLI {
         let usage = """
         LatencyBench — KVM Console latency measurement bench.
 
+        Global options (apply to any subcommand):
+          --store <path>                      Path to devices.json (overrides
+                                              automatic discovery of the
+                                              sandboxed app container).
+
         Subcommands:
-          list                                List saved devices.
+          list [--store <path>]               List saved devices.
           video --device <name|uuid> [opts]   Measure video pipeline latency.
             --duration <seconds>              (default: 30)
             --frames <count>                  Stop after N frames.
@@ -65,10 +70,27 @@ struct BenchCLI {
         FileHandle.standardError.write(Data((usage + "\n").utf8))
     }
 
-    static func runList() throws {
-        let devices = DeviceSelector.listSavedDevices()
+    static func runList(args: [String] = []) throws {
+        let opts = try parseOptions(args: args)
+        let resolved = DeviceSelector.resolveStoreURL(override: opts.store)
+        let devices = DeviceSelector.listSavedDevices(storeURL: opts.store)
+
+        if let resolved {
+            FileHandle.standardError.write(Data("Reading: \(resolved.path)\n".utf8))
+        } else {
+            FileHandle.standardError.write(Data(
+                "No devices.json found at any of these locations:\n".utf8
+            ))
+            for candidate in DeviceSelector.candidateStoreURLs(override: opts.store) {
+                FileHandle.standardError.write(Data("  - \(candidate.path)\n".utf8))
+            }
+            FileHandle.standardError.write(Data((
+                "If KVM Console (sandboxed) holds your devices, grant the terminal Full Disk Access\n"
+                + "in System Settings → Privacy & Security, or pass --store <path>.\n"
+            ).utf8))
+        }
         if devices.isEmpty {
-            print("No saved devices. Run KVM Console once and add a connection, or pass --device interactively.")
+            print("No saved devices.")
             return
         }
         for device in devices {
@@ -79,7 +101,11 @@ struct BenchCLI {
 
     static func runVideo(args: [String]) async throws {
         let opts = try parseOptions(args: args)
-        let selection = try DeviceSelector.resolve(identifier: opts.device, requireKVMType: nil)
+        let selection = try DeviceSelector.resolve(
+            identifier: opts.device,
+            requireKVMType: nil,
+            storeURL: opts.store
+        )
         FileHandle.standardError.write(Data(
             "Target: \(TTYPrompt.describe(selection.device))\n".utf8
         ))
@@ -113,7 +139,11 @@ struct BenchCLI {
 
     static func runInput(args: [String]) async throws {
         let opts = try parseOptions(args: args)
-        let selection = try DeviceSelector.resolve(identifier: opts.device, requireKVMType: nil)
+        let selection = try DeviceSelector.resolve(
+            identifier: opts.device,
+            requireKVMType: nil,
+            storeURL: opts.store
+        )
         FileHandle.standardError.write(Data(
             "Target: \(TTYPrompt.describe(selection.device))\n".utf8
         ))
@@ -149,7 +179,11 @@ struct BenchCLI {
 
     static func runAll(args: [String]) async throws {
         let opts = try parseOptions(args: args)
-        let selection = try DeviceSelector.resolve(identifier: opts.device, requireKVMType: nil)
+        let selection = try DeviceSelector.resolve(
+            identifier: opts.device,
+            requireKVMType: nil,
+            storeURL: opts.store
+        )
         FileHandle.standardError.write(Data(
             "Target: \(TTYPrompt.describe(selection.device))\n".utf8
         ))
@@ -254,6 +288,7 @@ struct BenchCLI {
         var settleMs: Int = 250
         var perSampleTimeoutMs: Int = 1500
         var echoRegion: CGRect?
+        var store: URL?
     }
 
     static func parseOptions(args: [String]) throws -> Options {
@@ -301,6 +336,9 @@ struct BenchCLI {
                 let raw = try value(after: arg, args: args, i: &i)
                 guard let n = Int(raw) else { throw OptionError.invalidValue(arg, raw) }
                 opts.perSampleTimeoutMs = n
+            case "--store":
+                let raw = try value(after: arg, args: args, i: &i)
+                opts.store = URL(fileURLWithPath: raw)
             case "--echo-region":
                 let raw = try value(after: arg, args: args, i: &i)
                 let parts = raw.split(separator: ",").map { Int($0) }
