@@ -15,6 +15,13 @@ final class InputLatencyRunner {
     enum Mode: String, Sendable {
         case cursor
         case keystroke
+        /// Like `keystroke`, but reconnects a fresh RFB session for each
+        /// sample so the framebuffer view isn't stale. Cannot measure
+        /// latency (each reconnect costs seconds); reports only
+        /// hit/miss per keystroke. Use when the target's RFB
+        /// implementation freezes the framebuffer for the controlling
+        /// connection (e.g. macOS Apple Screen Sharing).
+        case keystrokeVerify = "keystroke-verify"
     }
 
     struct Configuration {
@@ -77,6 +84,8 @@ final class InputLatencyRunner {
         switch configuration.mode {
         case .cursor:
             result = try await runCursorMode(cursor: cursor, size: size)
+        case .keystrokeVerify:
+            throw InputLatencyRunnerError.modeHandledElsewhere
         case .keystroke:
             guard let echoRegion = configuration.echoRegion else {
                 forwarder.cancel()
@@ -441,6 +450,7 @@ final class PresentationCursor: @unchecked Sendable {
 enum InputLatencyRunnerError: Error, LocalizedError {
     case missingFramebufferSize
     case missingEchoRegion
+    case modeHandledElsewhere
 
     var errorDescription: String? {
         switch self {
@@ -448,6 +458,8 @@ enum InputLatencyRunnerError: Error, LocalizedError {
             return "Target did not report a framebuffer size; cannot run input bench."
         case .missingEchoRegion:
             return "Keystroke-echo mode requires --echo-region x,y,w,h."
+        case .modeHandledElsewhere:
+            return "This input mode is not driven by InputLatencyRunner."
         }
     }
 }

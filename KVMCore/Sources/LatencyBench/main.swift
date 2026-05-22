@@ -51,7 +51,11 @@ struct BenchCLI {
             --out <directory>                 Where reports are written.
                                               (default: ./Scripts/latency-reports)
           input --device <name|uuid> [opts]   Measure input round-trip latency.
-            --mode cursor|keystroke           (default: cursor)
+            --mode cursor|keystroke|keystroke-verify  (default: cursor)
+                                              keystroke-verify reconnects per
+                                              sample to bypass framebuffer
+                                              staleness in Apple Screen Sharing;
+                                              reports only hit/miss, no latency.
             --samples <count>                 (default: 50)
             --region <px>                     Watch region side length (default: 48)
             --threshold <0..255>              Mean abs delta to consider changed (default: 8)
@@ -153,6 +157,11 @@ struct BenchCLI {
             "Target: \(TTYPrompt.describe(selection.device))\n".utf8
         ))
 
+        if opts.inputMode == .keystrokeVerify {
+            try await runKeystrokeVerify(selection: selection, opts: opts)
+            return
+        }
+
         let target = try makeTarget(for: selection)
         try await target.connect()
         let size = await target.framebufferSize
@@ -181,6 +190,40 @@ struct BenchCLI {
             input: inputSamples,
             opts: opts,
             framebufferSize: size
+        )
+    }
+
+    static func runKeystrokeVerify(selection: DeviceSelector.Selection, opts: Options) async throws {
+        guard let echoRegion = opts.echoRegion else {
+            throw OptionError.invalidValue("--mode keystroke-verify", "missing --echo-region")
+        }
+        guard selection.device.kvmType == .appleScreenSharing || selection.device.kvmType == .vnc else {
+            throw OptionError.invalidValue("--mode keystroke-verify", "only works with RFB targets")
+        }
+        let verifier = KeystrokeVerifier(
+            device: selection.device,
+            password: selection.password,
+            configuration: .init(
+                samples: opts.inputSamples,
+                regionSide: opts.regionSide,
+                changeThreshold: opts.threshold,
+                settleMs: opts.settleMs,
+                perSampleTimeoutMs: opts.perSampleTimeoutMs,
+                echoRegion: echoRegion,
+                keyHoldMs: opts.keyHoldMs,
+                postKeyHoldMs: opts.settleMs,
+                debugKeys: opts.debugKeys
+            )
+        )
+        let inputSamples = try await verifier.run()
+
+        try writeReport(
+            metric: "keystroke-verify",
+            device: selection.device,
+            frames: [],
+            input: inputSamples,
+            opts: opts,
+            framebufferSize: nil
         )
     }
 
