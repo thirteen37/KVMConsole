@@ -40,16 +40,25 @@ final class VideoLatencyRunner {
             }
         }
 
-        let frameLimit = configuration.maxFrames ?? Int.max
+        let frameLimit = configuration.maxFrames
         let duration = configuration.duration
 
+        // Watchdog: when the duration elapses, stop the probe so the
+        // `for await` below returns. Without this the loop blocks forever
+        // when the framebuffer stops sending updates (idle screen on Apple
+        // Screen Sharing).
+        let watchdog = Task {
+            try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
+            probe.stop()
+        }
+
+        let limitDescription = frameLimit.map { String($0) } ?? "no limit"
         FileHandle.standardError.write(Data(
-            "Capturing video latency for up to \(Int(duration))s (or \(frameLimit) frames)…\n".utf8
+            "Capturing video latency for up to \(Int(duration))s (frames: \(limitDescription))…\n".utf8
         ))
 
         var samples: [FrameSample] = []
         var lastPresented: CMTime?
-        let start = Date()
 
         for await event in probe.presentationEvents {
             let wireMs = event.wireArrivalHostTime.flatMap { wire -> Double? in
@@ -78,21 +87,23 @@ final class VideoLatencyRunner {
             ))
 
             if samples.count == 1 || samples.count % 30 == 0 {
+                let interFrameText = interFrameMs.map { String(format: "%.1fms", $0) } ?? "—"
+                let wireToPresentedText = wireToPresentedMs.map { String(format: "%.1fms", $0) } ?? "—"
                 FileHandle.standardError.write(Data(
                     String(
-                        format: "  frame %d  wire→present=%.1fms  enqueue→present=%.1fms  Δ=%.1fms\n",
+                        format: "  frame %d  wire→present=%@  enqueue→present=%.1fms  Δ=%@\n",
                         samples.count,
-                        wireToPresentedMs ?? .nan,
+                        wireToPresentedText as NSString,
                         enqueueToPresentedMs,
-                        interFrameMs ?? .nan
+                        interFrameText as NSString
                     ).utf8
                 ))
             }
 
-            if samples.count >= frameLimit { break }
-            if Date().timeIntervalSince(start) >= duration { break }
+            if let frameLimit, samples.count >= frameLimit { break }
         }
 
+        watchdog.cancel()
         forwarder.cancel()
         probe.stop()
         return samples
