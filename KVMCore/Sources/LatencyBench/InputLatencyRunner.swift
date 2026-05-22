@@ -3,6 +3,7 @@
 @preconcurrency import CoreVideo
 import CoreGraphics
 import Foundation
+import ImageIO
 import KVMCore
 
 /// Drives input events and measures the on-screen round-trip latency by
@@ -105,13 +106,13 @@ final class InputLatencyRunner {
             await sendMouseMove(to: restPoint, frame: size)
             try await Task.sleep(nanoseconds: UInt64(configuration.settleMs) * 1_000_000)
 
-            let baseline = await captureBaseline(
+            let baselineResult = await captureBaseline(
                 cursor: cursor,
                 centerX: nextPoint.x,
                 centerY: nextPoint.y,
                 regionSide: configuration.regionSide
             )
-            guard let baseline else {
+            guard let (baseline, _) = baselineResult else {
                 samples.append(InputSample(index: sampleIndex, latencyMs: nil, framesSearched: 0))
                 continue
             }
@@ -119,7 +120,7 @@ final class InputLatencyRunner {
             let sentHost = CMClockGetTime(CMClockGetHostTimeClock())
             await sendMouseMove(to: nextPoint, frame: size)
 
-            let (latency, framesSearched, maxDelta) = await searchForChange(
+            let (latency, framesSearched, maxDelta, _) = await searchForChange(
                 cursor: cursor,
                 sentHost: sentHost,
                 centerX: nextPoint.x,
@@ -160,13 +161,13 @@ final class InputLatencyRunner {
 
             try await Task.sleep(nanoseconds: UInt64(configuration.settleMs) * 1_000_000)
 
-            let baseline = await captureBaseline(
+            let baselineResult = await captureBaseline(
                 cursor: cursor,
                 centerX: centerX,
                 centerY: centerY,
                 regionSide: regionSide
             )
-            guard let baseline else {
+            guard let (baseline, baselineImageBuffer) = baselineResult else {
                 samples.append(InputSample(index: sampleIndex, latencyMs: nil, framesSearched: 0))
                 continue
             }
@@ -176,7 +177,7 @@ final class InputLatencyRunner {
             try await Task.sleep(nanoseconds: UInt64(configuration.keyHoldMs) * 1_000_000)
             await target.sendKeyboardReport(HIDKeyboardReport())
 
-            let (latency, framesSearched, maxDelta) = await searchForChange(
+            let (latency, framesSearched, maxDelta, lastImageBuffer) = await searchForChange(
                 cursor: cursor,
                 sentHost: sentHost,
                 centerX: centerX,
@@ -184,6 +185,29 @@ final class InputLatencyRunner {
                 regionSide: regionSide,
                 baseline: baseline
             )
+
+            if configuration.debugKeys && sampleIndex == 0 {
+                let baselineURL = dumpFramebufferPNG(
+                    pixelBuffer: baselineImageBuffer,
+                    label: "baseline"
+                )
+                let finalURL = lastImageBuffer.flatMap { buffer in
+                    dumpFramebufferPNG(pixelBuffer: buffer, label: "post-keystroke")
+                }
+                FileHandle.standardError.write(Data(
+                    ("    [debug] watch region center=(\(centerX),\(centerY)) side=\(regionSide)\n").utf8
+                ))
+                if let baselineURL {
+                    FileHandle.standardError.write(Data(
+                        "    [debug] baseline → \(baselineURL.path)\n".utf8
+                    ))
+                }
+                if let finalURL {
+                    FileHandle.standardError.write(Data(
+                        "    [debug] post-keystroke → \(finalURL.path)\n".utf8
+                    ))
+                }
+            }
 
             samples.append(InputSample(
                 index: sampleIndex,
@@ -202,12 +226,51 @@ final class InputLatencyRunner {
         return samples
     }
 
+    private func dumpFramebufferPNG(pixelBuffer: CVImageBuffer, label: String) -> URL? {
+        let width = CVPixelBufferGetWidth(pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer)
+        guard CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly) == kCVReturnSuccess else {
+            return nil
+        }
+        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
+        guard let base = CVPixelBufferGetBaseAddress(pixelBuffer) else { return nil }
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+
+        let bitmapInfo: UInt32 =
+            CGImageAlphaInfo.noneSkipFirst.rawValue
+            | CGBitmapInfo.byteOrder32Little.rawValue
+        guard let context = CGContext(
+            data: base,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: bitmapInfo
+        ), let cgImage = context.makeImage() else {
+            return nil
+        }
+
+        let timestamp = Int(Date().timeIntervalSince1970)
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("latencybench-\(timestamp)-\(label).png")
+        guard let dest = CGImageDestinationCreateWithURL(
+            url as CFURL,
+            "public.png" as CFString,
+            1,
+            nil
+        ) else { return nil }
+        CGImageDestinationAddImage(dest, cgImage, nil)
+        guard CGImageDestinationFinalize(dest) else { return nil }
+        return url
+    }
+
     private func captureBaseline(
         cursor: PresentationCursor,
         centerX: Int,
         centerY: Int,
         regionSide: Int
-    ) async -> PixelRegion? {
+    ) async -> (region: PixelRegion, imageBuffer: CVImageBuffer)? {
         let deadline = Date().addingTimeInterval(
             TimeInterval(configuration.perSampleTimeoutMs) / 1000
         )
@@ -220,7 +283,7 @@ final class InputLatencyRunner {
                 centerY: centerY,
                 regionSide: regionSide
             ) {
-                return region
+                return (region, imageBuffer)
             }
         }
         return nil
@@ -233,12 +296,13 @@ final class InputLatencyRunner {
         centerY: Int,
         regionSide: Int,
         baseline: PixelRegion
-    ) async -> (latency: Double?, framesSearched: Int, maxDelta: Double) {
+    ) async -> (latency: Double?, framesSearched: Int, maxDelta: Double, lastImageBuffer: CVImageBuffer?) {
         let deadline = Date().addingTimeInterval(
             TimeInterval(configuration.perSampleTimeoutMs) / 1000
         )
         var framesSearched = 0
         var maxDelta: Double = 0
+        var lastImageBuffer: CVImageBuffer?
         while Date() < deadline {
             guard let event = await cursor.next() else { break }
             framesSearched += 1
@@ -252,14 +316,15 @@ final class InputLatencyRunner {
                     regionSide: regionSide
                 )
             else { continue }
+            lastImageBuffer = pixelBuffer
             let delta = region.meanAbsoluteDifference(against: baseline)
             if delta > maxDelta { maxDelta = delta }
             if delta >= configuration.changeThreshold {
                 let dt = CMTimeSubtract(event.presentedHostTime, sentHost)
-                return (CMTimeGetSeconds(dt) * 1000.0, framesSearched, maxDelta)
+                return (CMTimeGetSeconds(dt) * 1000.0, framesSearched, maxDelta, lastImageBuffer)
             }
         }
-        return (nil, framesSearched, maxDelta)
+        return (nil, framesSearched, maxDelta, lastImageBuffer)
     }
 
     private func reportProgress(
