@@ -29,6 +29,8 @@ final class InputLatencyRunner {
         /// dropped by Apple Screen Sharing / the receiving OS, so a real
         /// keystroke needs a measurable hold.
         var keyHoldMs: Int
+        /// Verbose per-sample diagnostics: what was sent, what was seen.
+        var debugKeys: Bool
     }
 
     struct InputSample {
@@ -117,7 +119,7 @@ final class InputLatencyRunner {
             let sentHost = CMClockGetTime(CMClockGetHostTimeClock())
             await sendMouseMove(to: nextPoint, frame: size)
 
-            let (latency, framesSearched) = await searchForChange(
+            let (latency, framesSearched, maxDelta) = await searchForChange(
                 cursor: cursor,
                 sentHost: sentHost,
                 centerX: nextPoint.x,
@@ -131,7 +133,13 @@ final class InputLatencyRunner {
                 latencyMs: latency,
                 framesSearched: framesSearched
             ))
-            reportProgress(sampleIndex: sampleIndex, latency: latency, framesSearched: framesSearched)
+            reportProgress(
+                sampleIndex: sampleIndex,
+                latency: latency,
+                framesSearched: framesSearched,
+                maxDelta: maxDelta,
+                detail: "cursor→(\(nextPoint.x),\(nextPoint.y))"
+            )
         }
         return samples
     }
@@ -168,7 +176,7 @@ final class InputLatencyRunner {
             try await Task.sleep(nanoseconds: UInt64(configuration.keyHoldMs) * 1_000_000)
             await target.sendKeyboardReport(HIDKeyboardReport())
 
-            let (latency, framesSearched) = await searchForChange(
+            let (latency, framesSearched, maxDelta) = await searchForChange(
                 cursor: cursor,
                 sentHost: sentHost,
                 centerX: centerX,
@@ -182,7 +190,14 @@ final class InputLatencyRunner {
                 latencyMs: latency,
                 framesSearched: framesSearched
             ))
-            reportProgress(sampleIndex: sampleIndex, latency: latency, framesSearched: framesSearched)
+            let keysym = HIDUsageToX11Keysym.lookup(usage: usage) ?? 0
+            reportProgress(
+                sampleIndex: sampleIndex,
+                latency: latency,
+                framesSearched: framesSearched,
+                maxDelta: maxDelta,
+                detail: String(format: "HID=0x%02X keysym=0x%04X", usage, keysym)
+            )
         }
         return samples
     }
@@ -218,11 +233,12 @@ final class InputLatencyRunner {
         centerY: Int,
         regionSide: Int,
         baseline: PixelRegion
-    ) async -> (latency: Double?, framesSearched: Int) {
+    ) async -> (latency: Double?, framesSearched: Int, maxDelta: Double) {
         let deadline = Date().addingTimeInterval(
             TimeInterval(configuration.perSampleTimeoutMs) / 1000
         )
         var framesSearched = 0
+        var maxDelta: Double = 0
         while Date() < deadline {
             guard let event = await cursor.next() else { break }
             framesSearched += 1
@@ -237,22 +253,44 @@ final class InputLatencyRunner {
                 )
             else { continue }
             let delta = region.meanAbsoluteDifference(against: baseline)
+            if delta > maxDelta { maxDelta = delta }
             if delta >= configuration.changeThreshold {
                 let dt = CMTimeSubtract(event.presentedHostTime, sentHost)
-                return (CMTimeGetSeconds(dt) * 1000.0, framesSearched)
+                return (CMTimeGetSeconds(dt) * 1000.0, framesSearched, maxDelta)
             }
         }
-        return (nil, framesSearched)
+        return (nil, framesSearched, maxDelta)
     }
 
-    private func reportProgress(sampleIndex: Int, latency: Double?, framesSearched: Int) {
-        if sampleIndex == 0 || (sampleIndex + 1) % 10 == 0 {
+    private func reportProgress(
+        sampleIndex: Int,
+        latency: Double?,
+        framesSearched: Int,
+        maxDelta: Double,
+        detail: String
+    ) {
+        let isPeriodic = sampleIndex == 0 || (sampleIndex + 1) % 10 == 0
+        guard isPeriodic || configuration.debugKeys else { return }
+        let latencyText = latency.map { String(format: "%.1fms", $0) } ?? "miss"
+        if configuration.debugKeys {
+            FileHandle.standardError.write(Data(
+                String(
+                    format: "  sample %d/%d %@  latency=%@ frames=%d maxDelta=%.2f\n",
+                    sampleIndex + 1,
+                    configuration.samples,
+                    detail as NSString,
+                    latencyText as NSString,
+                    framesSearched,
+                    maxDelta
+                ).utf8
+            ))
+        } else {
             FileHandle.standardError.write(Data(
                 String(
                     format: "  sample %d/%d  latency=%@ frames=%d\n",
                     sampleIndex + 1,
                     configuration.samples,
-                    latency.map { String(format: "%.1fms", $0) } ?? "miss",
+                    latencyText as NSString,
                     framesSearched
                 ).utf8
             ))

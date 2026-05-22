@@ -62,6 +62,8 @@ struct BenchCLI {
             --key-hold-ms <ms>                Hold time between keydown and keyup
                                               (default: 30). Sub-millisecond holds
                                               get coalesced by Apple Screen Sharing.
+            --debug-keys                      Print per-sample detail: HID/keysym
+                                              sent, max delta seen, frames searched.
             --out <directory>                 (default: ./Scripts/latency-reports)
           all --device <name|uuid> [opts]     Run video then input back-to-back.
 
@@ -165,7 +167,8 @@ struct BenchCLI {
                 settleMs: opts.settleMs,
                 perSampleTimeoutMs: opts.perSampleTimeoutMs,
                 echoRegion: opts.echoRegion,
-                keyHoldMs: opts.keyHoldMs
+                keyHoldMs: opts.keyHoldMs,
+                debugKeys: opts.debugKeys
             )
         )
         let inputSamples = try await runner.run()
@@ -212,7 +215,8 @@ struct BenchCLI {
                 settleMs: opts.settleMs,
                 perSampleTimeoutMs: opts.perSampleTimeoutMs,
                 echoRegion: opts.echoRegion,
-                keyHoldMs: opts.keyHoldMs
+                keyHoldMs: opts.keyHoldMs,
+                debugKeys: opts.debugKeys
             )
         )
         let inputSamples = try await inputRunner.run()
@@ -295,6 +299,7 @@ struct BenchCLI {
         var echoRegion: CGRect?
         var store: URL?
         var keyHoldMs: Int = 30
+        var debugKeys: Bool = false
     }
 
     static func parseOptions(args: [String]) throws -> Options {
@@ -349,6 +354,8 @@ struct BenchCLI {
                 let raw = try value(after: arg, args: args, i: &i)
                 guard let n = Int(raw) else { throw OptionError.invalidValue(arg, raw) }
                 opts.keyHoldMs = n
+            case "--debug-keys":
+                opts.debugKeys = true
             case "--echo-region":
                 let raw = try value(after: arg, args: args, i: &i)
                 let parts = raw.split(separator: ",").map { Int($0) }
