@@ -59,6 +59,9 @@ struct BenchCLI {
             --timeout-ms <ms>                 Per-sample timeout (default: 1500)
             --echo-region x,y,w,h             Required in --mode keystroke; framebuffer
                                               pixel rect where digit echo appears.
+            --key-hold-ms <ms>                Hold time between keydown and keyup
+                                              (default: 30). Sub-millisecond holds
+                                              get coalesced by Apple Screen Sharing.
             --out <directory>                 (default: ./Scripts/latency-reports)
           all --device <name|uuid> [opts]     Run video then input back-to-back.
 
@@ -161,7 +164,8 @@ struct BenchCLI {
                 changeThreshold: opts.threshold,
                 settleMs: opts.settleMs,
                 perSampleTimeoutMs: opts.perSampleTimeoutMs,
-                echoRegion: opts.echoRegion
+                echoRegion: opts.echoRegion,
+                keyHoldMs: opts.keyHoldMs
             )
         )
         let inputSamples = try await runner.run()
@@ -207,7 +211,8 @@ struct BenchCLI {
                 changeThreshold: opts.threshold,
                 settleMs: opts.settleMs,
                 perSampleTimeoutMs: opts.perSampleTimeoutMs,
-                echoRegion: opts.echoRegion
+                echoRegion: opts.echoRegion,
+                keyHoldMs: opts.keyHoldMs
             )
         )
         let inputSamples = try await inputRunner.run()
@@ -289,6 +294,7 @@ struct BenchCLI {
         var perSampleTimeoutMs: Int = 1500
         var echoRegion: CGRect?
         var store: URL?
+        var keyHoldMs: Int = 30
     }
 
     static func parseOptions(args: [String]) throws -> Options {
@@ -339,6 +345,10 @@ struct BenchCLI {
             case "--store":
                 let raw = try value(after: arg, args: args, i: &i)
                 opts.store = URL(fileURLWithPath: raw)
+            case "--key-hold-ms":
+                let raw = try value(after: arg, args: args, i: &i)
+                guard let n = Int(raw) else { throw OptionError.invalidValue(arg, raw) }
+                opts.keyHoldMs = n
             case "--echo-region":
                 let raw = try value(after: arg, args: args, i: &i)
                 let parts = raw.split(separator: ",").map { Int($0) }

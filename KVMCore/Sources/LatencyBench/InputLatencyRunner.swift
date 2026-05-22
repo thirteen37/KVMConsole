@@ -24,6 +24,11 @@ final class InputLatencyRunner {
         var settleMs: Int
         var perSampleTimeoutMs: Int
         var echoRegion: CGRect?
+        /// Time the key is held down between the keydown and keyup reports.
+        /// Sending them back-to-back results in events being coalesced or
+        /// dropped by Apple Screen Sharing / the receiving OS, so a real
+        /// keystroke needs a measurable hold.
+        var keyHoldMs: Int
     }
 
     struct InputSample {
@@ -160,6 +165,7 @@ final class InputLatencyRunner {
 
             let sentHost = CMClockGetTime(CMClockGetHostTimeClock())
             await target.sendKeyboardReport(HIDKeyboardReport(modifier: 0, keycodes: [usage]))
+            try await Task.sleep(nanoseconds: UInt64(configuration.keyHoldMs) * 1_000_000)
             await target.sendKeyboardReport(HIDKeyboardReport())
 
             let (latency, framesSearched) = await searchForChange(
