@@ -40,7 +40,6 @@ final class DisplayProbe: @unchecked Sendable {
 
     private struct Pending {
         let index: Int
-        let sample: CMSampleBuffer
         let wire: CMTime?
         let pts: CMTime
         let enqueueHost: CMTime
@@ -119,7 +118,6 @@ final class DisplayProbe: @unchecked Sendable {
         }
         pending.append(Pending(
             index: index,
-            sample: sampleBuffer,
             wire: wireArrival,
             pts: pts,
             enqueueHost: enqueueHost,
@@ -147,15 +145,14 @@ final class DisplayProbe: @unchecked Sendable {
         stateLock.unlock()
 
         for item in ready {
-            let event = PresentationEvent(
+            presentationContinuation?.yield(PresentationEvent(
                 sampleIndex: item.index,
                 wireArrivalHostTime: item.wire,
                 pts: item.pts,
                 enqueueHostTime: item.enqueueHost,
                 presentedHostTime: now,
                 imageBuffer: item.imageBuffer
-            )
-            presentationContinuation?.yield(event)
+            ))
         }
     }
 }

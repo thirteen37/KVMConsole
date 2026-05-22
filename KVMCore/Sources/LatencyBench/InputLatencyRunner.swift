@@ -28,7 +28,6 @@ final class InputLatencyRunner {
 
     struct InputSample {
         let index: Int
-        let sentMs: Double
         let latencyMs: Double?
         let framesSearched: Int
     }
@@ -106,7 +105,7 @@ final class InputLatencyRunner {
                 regionSide: configuration.regionSide
             )
             guard let baseline else {
-                samples.append(InputSample(index: sampleIndex, sentMs: 0, latencyMs: nil, framesSearched: 0))
+                samples.append(InputSample(index: sampleIndex, latencyMs: nil, framesSearched: 0))
                 continue
             }
 
@@ -124,7 +123,6 @@ final class InputLatencyRunner {
 
             samples.append(InputSample(
                 index: sampleIndex,
-                sentMs: 0,
                 latencyMs: latency,
                 framesSearched: framesSearched
             ))
@@ -156,7 +154,7 @@ final class InputLatencyRunner {
                 regionSide: regionSide
             )
             guard let baseline else {
-                samples.append(InputSample(index: sampleIndex, sentMs: 0, latencyMs: nil, framesSearched: 0))
+                samples.append(InputSample(index: sampleIndex, latencyMs: nil, framesSearched: 0))
                 continue
             }
 
@@ -175,7 +173,6 @@ final class InputLatencyRunner {
 
             samples.append(InputSample(
                 index: sampleIndex,
-                sentMs: 0,
                 latencyMs: latency,
                 framesSearched: framesSearched
             ))
