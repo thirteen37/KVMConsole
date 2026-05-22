@@ -15,5 +15,8 @@ build/
 .swiftpm/
 Package.resolved
 
+# Bench outputs
+Scripts/latency-reports/
+
 # Conductor / workspace
 .context/

@@ -25,5 +25,11 @@ protocol LatencyTarget: AnyObject {
 
     /// Human-readable name for log lines and report metadata.
     var displayLabel: String { get }
+
+    /// Sends an absolute mouse report through the same input path the app uses.
+    func sendMouseReport(_ report: HIDMouseAbsoluteReport) async
+
+    /// Sends a keyboard report through the same input path the app uses.
+    func sendKeyboardReport(_ report: HIDKeyboardReport) async
 }
 #endif

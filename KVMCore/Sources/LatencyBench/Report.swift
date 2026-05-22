@@ -8,17 +8,20 @@ struct Report {
     let metric: String
     let metadata: [String: AnyEncodable]
     let frameSamples: [VideoLatencyRunner.FrameSample]
+    let inputSamples: [InputLatencyRunner.InputSample]
 
     init(
         device: Device,
         metric: String,
         metadata: [String: AnyEncodable],
-        frameSamples: [VideoLatencyRunner.FrameSample] = []
+        frameSamples: [VideoLatencyRunner.FrameSample] = [],
+        inputSamples: [InputLatencyRunner.InputSample] = []
     ) {
         self.device = device
         self.metric = metric
         self.metadata = metadata
         self.frameSamples = frameSamples
+        self.inputSamples = inputSamples
     }
 
     func write(to directory: URL) throws -> (json: URL, csv: URL) {
@@ -52,28 +55,31 @@ struct Report {
             metric: metric,
             metadata: metadata,
             samples: frameSamples.map(SampleRow.init),
-            summary: SummarySection(samples: frameSamples)
+            summary: SummarySection(samples: frameSamples),
+            inputSamples: inputSamples.map(InputSampleRow.init),
+            inputSummary: InputSummarySection(samples: inputSamples)
         )
         try encoder.encode(payload).write(to: jsonURL, options: .atomic)
 
-        var csv = "frameIndex,wireToEnqueueMs,enqueueToPresentedMs,wireToPresentedMs,interFrameMs\n"
-        for sample in frameSamples {
-            csv += "\(sample.frameIndex),"
-            csv += sample.wireToEnqueueMs.map { String(format: "%.3f", $0) } ?? ""
-            csv += ","
-            csv += String(format: "%.3f", sample.enqueueToPresentedMs)
-            csv += ","
-            csv += sample.wireToPresentedMs.map { String(format: "%.3f", $0) } ?? ""
-            csv += ","
-            csv += sample.interFrameMs.map { String(format: "%.3f", $0) } ?? ""
-            csv += "\n"
-        }
+        let csv = inputSamples.isEmpty ? frameCSV() : inputCSV()
         try Data(csv.utf8).write(to: csvURL, options: .atomic)
 
         return (jsonURL, csvURL)
     }
 
     func summaryDescription() -> String {
+        if !inputSamples.isEmpty {
+            let summary = InputSummarySection(samples: inputSamples)
+            var lines = ["Input samples: \(summary.count)  hits=\(summary.hits)  misses=\(summary.misses)"]
+            for stage in summary.stages {
+                lines.append(String(
+                    format: "  %-22@ min=%.1f  p50=%.1f  p95=%.1f  p99=%.1f  max=%.1f  mean=%.1f  n=%d",
+                    stage.name as NSString,
+                    stage.min, stage.p50, stage.p95, stage.p99, stage.max, stage.mean, stage.count
+                ))
+            }
+            return lines.joined(separator: "\n")
+        }
         guard !frameSamples.isEmpty else { return "No frames captured." }
         let summary = SummarySection(samples: frameSamples)
         var lines = ["Frames captured: \(frameSamples.count)"]
@@ -86,6 +92,39 @@ struct Report {
         }
         return lines.joined(separator: "\n")
     }
+
+    private func frameCSV() -> String {
+        var csv = "frameIndex,wireToEnqueueMs,enqueueToPresentedMs,wireToPresentedMs,interFrameMs\n"
+        for sample in frameSamples {
+            csv += "\(sample.frameIndex),"
+            csv += sample.wireToEnqueueMs.map { String(format: "%.3f", $0) } ?? ""
+            csv += ","
+            csv += String(format: "%.3f", sample.enqueueToPresentedMs)
+            csv += ","
+            csv += sample.wireToPresentedMs.map { String(format: "%.3f", $0) } ?? ""
+            csv += ","
+            csv += sample.interFrameMs.map { String(format: "%.3f", $0) } ?? ""
+            csv += "\n"
+        }
+        return csv
+    }
+
+    private func inputCSV() -> String {
+        var csv = "sampleIndex,inputMode,fromX,fromY,toX,toY,hit,changedPixels,framesObserved,inputToWireArrivalMs,wireToPresentedMs,inputToPresentedMs\n"
+        for sample in inputSamples {
+            csv += "\(sample.sampleIndex),"
+            csv += "\(sample.inputMode),"
+            csv += "\(sample.fromX),\(sample.fromY),\(sample.toX),\(sample.toY),"
+            csv += "\(sample.hit),\(sample.changedPixels),\(sample.framesObserved),"
+            csv += sample.inputToWireArrivalMs.map { String(format: "%.3f", $0) } ?? ""
+            csv += ","
+            csv += sample.wireToPresentedMs.map { String(format: "%.3f", $0) } ?? ""
+            csv += ","
+            csv += sample.inputToPresentedMs.map { String(format: "%.3f", $0) } ?? ""
+            csv += "\n"
+        }
+        return csv
+    }
 }
 
 struct JSONPayload: Encodable {
@@ -96,6 +135,8 @@ struct JSONPayload: Encodable {
     let metadata: [String: AnyEncodable]
     let samples: [SampleRow]
     let summary: SummarySection
+    let inputSamples: [InputSampleRow]
+    let inputSummary: InputSummarySection
 
     struct DeviceSection: Encodable {
         let id: String
@@ -120,6 +161,36 @@ struct SampleRow: Encodable {
         self.enqueueToPresentedMs = sample.enqueueToPresentedMs
         self.wireToPresentedMs = sample.wireToPresentedMs
         self.interFrameMs = sample.interFrameMs
+    }
+}
+
+struct InputSampleRow: Encodable {
+    let sampleIndex: Int
+    let inputMode: String
+    let fromX: UInt16
+    let fromY: UInt16
+    let toX: UInt16
+    let toY: UInt16
+    let hit: Bool
+    let changedPixels: Int
+    let framesObserved: Int
+    let inputToWireArrivalMs: Double?
+    let wireToPresentedMs: Double?
+    let inputToPresentedMs: Double?
+
+    init(_ sample: InputLatencyRunner.InputSample) {
+        sampleIndex = sample.sampleIndex
+        inputMode = sample.inputMode
+        fromX = sample.fromX
+        fromY = sample.fromY
+        toX = sample.toX
+        toY = sample.toY
+        hit = sample.hit
+        changedPixels = sample.changedPixels
+        framesObserved = sample.framesObserved
+        inputToWireArrivalMs = sample.inputToWireArrivalMs
+        wireToPresentedMs = sample.wireToPresentedMs
+        inputToPresentedMs = sample.inputToPresentedMs
     }
 }
 
@@ -148,6 +219,42 @@ struct SummarySection: Encodable {
             Stage.make("wireToPresentedMs", values: wireToPresented),
             Stage.make("interFrameMs", values: interFrame)
         ]
+    }
+}
+
+struct InputSummarySection: Encodable {
+    let count: Int
+    let hits: Int
+    let misses: Int
+    let stages: [SummarySection.Stage]
+    let min: Double
+    let p50: Double
+    let p95: Double
+    let p99: Double
+    let max: Double
+    let mean: Double
+
+    init(samples: [InputLatencyRunner.InputSample]) {
+        count = samples.count
+        hits = samples.filter(\.hit).count
+        misses = count - hits
+
+        let inputToWireArrival = samples.compactMap(\.inputToWireArrivalMs)
+        let wireToPresented = samples.compactMap(\.wireToPresentedMs)
+        let inputToPresented = samples.compactMap(\.inputToPresentedMs)
+        stages = [
+            SummarySection.Stage.make("inputToWireArrivalMs", values: inputToWireArrival),
+            SummarySection.Stage.make("wireToPresentedMs", values: wireToPresented),
+            SummarySection.Stage.make("inputToPresentedMs", values: inputToPresented)
+        ]
+
+        let stage = stages[2]
+        min = stage.min
+        p50 = stage.p50
+        p95 = stage.p95
+        p99 = stage.p99
+        max = stage.max
+        mean = stage.mean
     }
 }
 
