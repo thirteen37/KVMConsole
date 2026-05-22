@@ -264,6 +264,13 @@ public actor RFBClient {
                 }
                 rectangles.append(.zrle(rectangle, compressedData))
             case RFBEncoding.desktopSize.rawValue:
+                // Any pre-resize rectangles were sized for the old framebuffer
+                // dimensions, so applying them to the freshly allocated post-
+                // resize buffer would either trip the writer's bounds check or
+                // land at wrong coordinates. Discard them — the pre-opt code
+                // also lost their visual content here because the old buffer
+                // was deallocated by resize().
+                rectangles.removeAll(keepingCapacity: true)
                 try framebuffer.resize(width: Int(rectangle.width), height: Int(rectangle.height))
                 inputSender.updateFramebufferSize(width: Int(rectangle.width), height: Int(rectangle.height))
                 onVideoSize(CGSize(width: Int(rectangle.width), height: Int(rectangle.height)))
