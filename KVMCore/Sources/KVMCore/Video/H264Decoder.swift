@@ -116,6 +116,12 @@ public final class H264Decoder: @unchecked Sendable {
         let context = Unmanaged.passRetained(
             H264FrameDecodeContext(wireArrivalHostTime: frame.wireArrivalHostTime)
         )
+        // The output callback always consumes the +1 retain via
+        // `takeRetainedValue()`. VT can still surface a non-zero status from
+        // `DecodeFrame` after the callback has run (e.g. during stream resync),
+        // so we must not release here too — that would double-free. If VT ever
+        // returns an error without invoking the callback the context leaks,
+        // which is bounded and far safer than a crash.
         let status = VTDecompressionSessionDecodeFrame(
             decompressionSession,
             sampleBuffer: sampleBuffer,
@@ -123,11 +129,7 @@ public final class H264Decoder: @unchecked Sendable {
             frameRefcon: context.toOpaque(),
             infoFlagsOut: nil
         )
-        guard status == noErr else {
-            // VT did not accept the frame; release the context we retained.
-            context.release()
-            throw H264DecoderError.decode(status)
-        }
+        guard status == noErr else { throw H264DecoderError.decode(status) }
     }
 
     public func invalidate() {
