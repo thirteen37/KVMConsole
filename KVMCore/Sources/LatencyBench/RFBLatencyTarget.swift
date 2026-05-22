@@ -94,13 +94,6 @@ final class RFBLatencyTarget: LatencyTarget {
         runTask = nil
     }
 
-    func sendKeyboardReport(_ report: HIDKeyboardReport) async {
-        client?.sendKeyboardReport(report)
-    }
-
-    func sendMouseReport(_ report: HIDMouseAbsoluteReport) async {
-        await client?.sendMouseReport(report)
-    }
 }
 
 enum RFBLatencyTargetError: Error, LocalizedError {

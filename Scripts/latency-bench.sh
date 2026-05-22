@@ -5,7 +5,7 @@
 # container. To let the bench read it, grant the terminal running this
 # script Full Disk Access (System Settings → Privacy & Security → Full
 # Disk Access). Alternatively, pass `--store <path>` to point the bench
-# at an exported `devices.json` and use TTY prompts for the password.
+# at an exported `devices.json`.
 #
 # Usage: ./Scripts/latency-bench.sh <subcommand> [options...]
 #   ./Scripts/latency-bench.sh list

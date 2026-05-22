@@ -80,13 +80,6 @@ final class SessionLatencyTarget: LatencyTarget {
         session.disconnect(updateState: true)
     }
 
-    func sendKeyboardReport(_ report: HIDKeyboardReport) async {
-        session.sendKeyboardReport(report)
-    }
-
-    func sendMouseReport(_ report: HIDMouseAbsoluteReport) async {
-        session.sendMouseReport(report)
-    }
 }
 
 enum SessionLatencyTargetError: Error, LocalizedError {
