@@ -156,6 +156,13 @@ final class InputLatencyRunner {
         let centerY = Int(echoRegion.midY)
         let regionSide = max(configuration.regionSide, Int(min(echoRegion.width, echoRegion.height)))
 
+        // Click into the echo region first so the target window/tab has
+        // keyboard focus before we start firing keystrokes. Without this,
+        // keys land in whatever held focus when the bench connected
+        // (typically the URL bar of a freshly-pasted data: URL).
+        await clickToFocus(centerX: centerX, centerY: centerY, frame: size)
+        try await Task.sleep(nanoseconds: 250_000_000)
+
         for sampleIndex in 0..<configuration.samples {
             let usage = digitUsages[sampleIndex % digitUsages.count]
 
@@ -380,6 +387,20 @@ final class InputLatencyRunner {
             (inner.xLo, (inner.yLo + inner.yHi) / 2),
             (inner.xHi, (inner.yLo + inner.yHi) / 2)
         ]
+    }
+
+    private func clickToFocus(centerX: Int, centerY: Int, frame: CGSize) async {
+        guard frame.width > 1, frame.height > 1 else { return }
+        let nx = Double(centerX) / max(Double(frame.width) - 1, 1)
+        let ny = Double(centerY) / max(Double(frame.height) - 1, 1)
+        let x = UInt16(max(1, min(32_767, Int((nx * 32_766).rounded()) + 1)))
+        let y = UInt16(max(1, min(32_767, Int((ny * 32_766).rounded()) + 1)))
+        // Move first, then primary-button down, then up.
+        await target.sendMouseReport(HIDMouseAbsoluteReport(buttons: 0, x: x, y: y, wheel: 0))
+        try? await Task.sleep(nanoseconds: 30_000_000)
+        await target.sendMouseReport(HIDMouseAbsoluteReport(buttons: 1, x: x, y: y, wheel: 0))
+        try? await Task.sleep(nanoseconds: 30_000_000)
+        await target.sendMouseReport(HIDMouseAbsoluteReport(buttons: 0, x: x, y: y, wheel: 0))
     }
 
     private func sendMouseMove(to point: (x: Int, y: Int), frame: CGSize) async {
