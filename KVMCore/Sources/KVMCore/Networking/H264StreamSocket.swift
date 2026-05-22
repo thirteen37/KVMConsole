@@ -1,3 +1,4 @@
+@preconcurrency import CoreMedia
 import Foundation
 
 public enum H264StreamError: Error, LocalizedError, Equatable {
@@ -21,12 +22,23 @@ public struct H264StreamFrame: Equatable, Sendable {
     public let timestampMicros: UInt64
     public let payload: Data
     public let sequenceNumber: UInt64
+    /// Host-clock time at which this frame's wire bytes were received.
+    /// Always populated by the production WebSocket readers; consumed only by
+    /// `LatencyBench`. Production rendering ignores it.
+    public let wireArrivalHostTime: CMTime?
 
-    public init(isKeyFrame: Bool, timestampMicros: UInt64, payload: Data, sequenceNumber: UInt64 = 0) {
+    public init(
+        isKeyFrame: Bool,
+        timestampMicros: UInt64,
+        payload: Data,
+        sequenceNumber: UInt64 = 0,
+        wireArrivalHostTime: CMTime? = nil
+    ) {
         self.isKeyFrame = isKeyFrame
         self.timestampMicros = timestampMicros
         self.payload = payload
         self.sequenceNumber = sequenceNumber
+        self.wireArrivalHostTime = wireArrivalHostTime
     }
 }
 
@@ -49,7 +61,8 @@ struct H264StreamFrameSequencer {
             isKeyFrame: frame.isKeyFrame,
             timestampMicros: frame.timestampMicros,
             payload: frame.payload,
-            sequenceNumber: nextSequenceNumber
+            sequenceNumber: nextSequenceNumber,
+            wireArrivalHostTime: frame.wireArrivalHostTime
         )
     }
 
@@ -117,9 +130,17 @@ public final class H264StreamSocket: @unchecked Sendable {
                         let message = try await webSocketTask.receive()
                         switch message {
                         case .data(let data):
+                            let wireArrival = CMClockGetTime(CMClockGetHostTimeClock())
                             do {
-                                let frame = try H264StreamFrameParser.parse(data)
-                                frameSequencer.recordYield(continuation.yield(frameSequencer.nextFrame(from: frame)))
+                                let parsed = try H264StreamFrameParser.parse(data)
+                                let stamped = H264StreamFrame(
+                                    isKeyFrame: parsed.isKeyFrame,
+                                    timestampMicros: parsed.timestampMicros,
+                                    payload: parsed.payload,
+                                    sequenceNumber: parsed.sequenceNumber,
+                                    wireArrivalHostTime: wireArrival
+                                )
+                                frameSequencer.recordYield(continuation.yield(frameSequencer.nextFrame(from: stamped)))
                             } catch H264StreamError.frameTooShort, H264StreamError.emptyPayload {
                                 continue
                             }

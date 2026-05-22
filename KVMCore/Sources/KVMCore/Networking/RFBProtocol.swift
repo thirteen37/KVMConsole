@@ -319,14 +319,15 @@ public struct RFBRectangle: Equatable, Sendable {
 }
 
 public struct RFBByteReader {
-    private let bytes: [UInt8]
-    private var offset = 0
+    private let bytes: Data
+    private var offset: Int
 
     public init(_ data: Data) {
-        self.bytes = Array(data)
+        self.bytes = data
+        self.offset = data.startIndex
     }
 
-    public var remainingCount: Int { bytes.count - offset }
+    public var remainingCount: Int { bytes.endIndex - offset }
     public var isAtEnd: Bool { remainingCount == 0 }
 
     public mutating func readUInt8() throws -> UInt8 {
@@ -359,7 +360,7 @@ public struct RFBByteReader {
         }
         let start = offset
         offset += count
-        return Data(bytes[start..<offset])
+        return bytes[start..<offset]
     }
 
     public mutating func readString(count: Int) throws -> String {
@@ -371,7 +372,10 @@ public struct RFBByteReader {
     }
 
     public mutating func skip(_ count: Int) throws {
-        _ = try readData(count: count)
+        guard count >= 0, remainingCount >= count else {
+            throw RFBError.malformedMessage("expected \(count) bytes")
+        }
+        offset += count
     }
 }
 

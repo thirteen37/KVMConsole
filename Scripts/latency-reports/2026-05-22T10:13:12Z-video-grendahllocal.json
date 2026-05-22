@@ -1,0 +1,1426 @@
+{
+  "device" : {
+    "host" : "grendahl.local",
+    "id" : "F4CABF9E-D51B-4076-81A1-759205F54A43",
+    "kvmType" : "appleScreenSharing",
+    "kvmTypeDisplay" : "Apple Screen Sharing",
+    "name" : "grendahl.local",
+    "port" : 5900
+  },
+  "inputSamples" : [
+
+  ],
+  "inputSummary" : {
+    "count" : 0,
+    "hits" : 0,
+    "max" : 0,
+    "mean" : 0,
+    "min" : 0,
+    "misses" : 0,
+    "p50" : 0,
+    "p95" : 0,
+    "p99" : 0
+  },
+  "metadata" : {
+    "changeThreshold" : 8,
+    "durationSec" : 60,
+    "frameLimit" : 0,
+    "framebufferHeight" : 1080,
+    "framebufferWidth" : 1920,
+    "inputMode" : "cursor",
+    "inputSamples" : 50,
+    "regionSide" : 48
+  },
+  "metric" : "video",
+  "ranAt" : "2026-05-22T10:13:12Z",
+  "samples" : [
+    {
+      "enqueueToPresentedMs" : 4.074042,
+      "frameIndex" : 0,
+      "wireToEnqueueMs" : 99.80766700000001,
+      "wireToPresentedMs" : 103.881709
+    },
+    {
+      "enqueueToPresentedMs" : 23.937416,
+      "frameIndex" : 1,
+      "interFrameMs" : 90.943291,
+      "wireToEnqueueMs" : 58.4095,
+      "wireToPresentedMs" : 82.34691600000001
+    },
+    {
+      "enqueueToPresentedMs" : 16.885916,
+      "frameIndex" : 2,
+      "interFrameMs" : 99.99775,
+      "wireToEnqueueMs" : 51.65,
+      "wireToPresentedMs" : 68.535916
+    },
+    {
+      "enqueueToPresentedMs" : 19.552042,
+      "frameIndex" : 3,
+      "interFrameMs" : 116.667334,
+      "wireToEnqueueMs" : 53.577125,
+      "wireToPresentedMs" : 73.129167
+    },
+    {
+      "enqueueToPresentedMs" : 17.160625,
+      "frameIndex" : 4,
+      "interFrameMs" : 191.680541,
+      "wireToEnqueueMs" : 61.523083,
+      "wireToPresentedMs" : 78.68370800000001
+    },
+    {
+      "enqueueToPresentedMs" : 21.355290999999998,
+      "frameIndex" : 5,
+      "interFrameMs" : 149.978375,
+      "wireToEnqueueMs" : 108.608375,
+      "wireToPresentedMs" : 129.96366600000002
+    },
+    {
+      "enqueueToPresentedMs" : 23.646667,
+      "frameIndex" : 6,
+      "interFrameMs" : 124.991834,
+      "wireToEnqueueMs" : 56.643041999999994,
+      "wireToPresentedMs" : 80.289709
+    },
+    {
+      "enqueueToPresentedMs" : 17.234208000000002,
+      "frameIndex" : 7,
+      "interFrameMs" : 108.348416,
+      "wireToEnqueueMs" : 56.312083,
+      "wireToPresentedMs" : 73.546291
+    },
+    {
+      "enqueueToPresentedMs" : 19.997208999999998,
+      "frameIndex" : 8,
+      "interFrameMs" : 141.660334,
+      "wireToEnqueueMs" : 59.29625,
+      "wireToPresentedMs" : 79.293459
+    },
+    {
+      "enqueueToPresentedMs" : 17.100666,
+      "frameIndex" : 9,
+      "interFrameMs" : 141.668291,
+      "wireToEnqueueMs" : 99.514459,
+      "wireToPresentedMs" : 116.615125
+    },
+    {
+      "enqueueToPresentedMs" : 18.974,
+      "frameIndex" : 10,
+      "interFrameMs" : 125.00604200000001,
+      "wireToEnqueueMs" : 57.042625,
+      "wireToPresentedMs" : 76.016625
+    },
+    {
+      "enqueueToPresentedMs" : 18.947875,
+      "frameIndex" : 11,
+      "interFrameMs" : 116.660042,
+      "wireToEnqueueMs" : 61.893292,
+      "wireToPresentedMs" : 80.841167
+    },
+    {
+      "enqueueToPresentedMs" : 16.593417,
+      "frameIndex" : 12,
+      "interFrameMs" : 158.32,
+      "wireToEnqueueMs" : 65.94737500000001,
+      "wireToPresentedMs" : 82.540792
+    },
+    {
+      "enqueueToPresentedMs" : 16.333333,
+      "frameIndex" : 13,
+      "interFrameMs" : 141.666166,
+      "wireToEnqueueMs" : 76.48629199999999,
+      "wireToPresentedMs" : 92.819625
+    },
+    {
+      "enqueueToPresentedMs" : 18.753208,
+      "frameIndex" : 14,
+      "interFrameMs" : 175.015375,
+      "wireToEnqueueMs" : 119.965625,
+      "wireToPresentedMs" : 138.71883300000002
+    },
+    {
+      "enqueueToPresentedMs" : 15.958041999999999,
+      "frameIndex" : 15,
+      "interFrameMs" : 174.983209,
+      "wireToEnqueueMs" : 151.481,
+      "wireToPresentedMs" : 167.439042
+    },
+    {
+      "enqueueToPresentedMs" : 23.909792,
+      "frameIndex" : 16,
+      "interFrameMs" : 133.342333,
+      "wireToEnqueueMs" : 59.348541,
+      "wireToPresentedMs" : 83.25833300000001
+    },
+    {
+      "enqueueToPresentedMs" : 23.366708,
+      "frameIndex" : 17,
+      "interFrameMs" : 116.685375,
+      "wireToEnqueueMs" : 57.146125,
+      "wireToPresentedMs" : 80.512833
+    },
+    {
+      "enqueueToPresentedMs" : 21.07575,
+      "frameIndex" : 18,
+      "interFrameMs" : 116.633208,
+      "wireToEnqueueMs" : 61.80675,
+      "wireToPresentedMs" : 82.8825
+    },
+    {
+      "enqueueToPresentedMs" : 21.359583,
+      "frameIndex" : 19,
+      "interFrameMs" : 183.328792,
+      "wireToEnqueueMs" : 69.004792,
+      "wireToPresentedMs" : 90.364375
+    },
+    {
+      "enqueueToPresentedMs" : 23.954166999999998,
+      "frameIndex" : 20,
+      "interFrameMs" : 133.34799999999998,
+      "wireToEnqueueMs" : 63.726291,
+      "wireToPresentedMs" : 87.680458
+    },
+    {
+      "enqueueToPresentedMs" : 16.789749999999998,
+      "frameIndex" : 21,
+      "interFrameMs" : 116.671542,
+      "wireToEnqueueMs" : 69.019125,
+      "wireToPresentedMs" : 85.808875
+    },
+    {
+      "enqueueToPresentedMs" : 24.097709,
+      "frameIndex" : 22,
+      "interFrameMs" : 133.319,
+      "wireToEnqueueMs" : 69.951166,
+      "wireToPresentedMs" : 94.04887500000001
+    },
+    {
+      "enqueueToPresentedMs" : 17.995334000000003,
+      "frameIndex" : 23,
+      "interFrameMs" : 141.678625,
+      "wireToEnqueueMs" : 72.434083,
+      "wireToPresentedMs" : 90.429417
+    },
+    {
+      "enqueueToPresentedMs" : 19.345458,
+      "frameIndex" : 24,
+      "interFrameMs" : 133.336291,
+      "wireToEnqueueMs" : 71.059708,
+      "wireToPresentedMs" : 90.405166
+    },
+    {
+      "enqueueToPresentedMs" : 19.973292,
+      "frameIndex" : 25,
+      "interFrameMs" : 133.334417,
+      "wireToEnqueueMs" : 70.17975,
+      "wireToPresentedMs" : 90.153042
+    },
+    {
+      "enqueueToPresentedMs" : 19.92575,
+      "frameIndex" : 26,
+      "interFrameMs" : 133.306333,
+      "wireToEnqueueMs" : 70.853583,
+      "wireToPresentedMs" : 90.77933300000001
+    },
+    {
+      "enqueueToPresentedMs" : 21.801791,
+      "frameIndex" : 27,
+      "interFrameMs" : 133.345125,
+      "wireToEnqueueMs" : 73.480542,
+      "wireToPresentedMs" : 95.282333
+    },
+    {
+      "enqueueToPresentedMs" : 21.597917000000002,
+      "frameIndex" : 28,
+      "interFrameMs" : 133.350834,
+      "wireToEnqueueMs" : 81.645,
+      "wireToPresentedMs" : 103.242917
+    },
+    {
+      "enqueueToPresentedMs" : 18.737416,
+      "frameIndex" : 29,
+      "interFrameMs" : 133.31141599999998,
+      "wireToEnqueueMs" : 80.462834,
+      "wireToPresentedMs" : 99.20025
+    },
+    {
+      "enqueueToPresentedMs" : 16.218291999999998,
+      "frameIndex" : 30,
+      "interFrameMs" : 125.011292,
+      "wireToEnqueueMs" : 72.9225,
+      "wireToPresentedMs" : 89.14079199999999
+    },
+    {
+      "enqueueToPresentedMs" : 21.375542,
+      "frameIndex" : 31,
+      "interFrameMs" : 125.00487499999998,
+      "wireToEnqueueMs" : 66.536416,
+      "wireToPresentedMs" : 87.911958
+    },
+    {
+      "enqueueToPresentedMs" : 21.024542,
+      "frameIndex" : 32,
+      "interFrameMs" : 124.980667,
+      "wireToEnqueueMs" : 65.82050000000001,
+      "wireToPresentedMs" : 86.84504199999999
+    },
+    {
+      "enqueueToPresentedMs" : 17.856165999999998,
+      "frameIndex" : 33,
+      "interFrameMs" : 125.02241599999999,
+      "wireToEnqueueMs" : 65.313334,
+      "wireToPresentedMs" : 83.1695
+    },
+    {
+      "enqueueToPresentedMs" : 17.965959,
+      "frameIndex" : 34,
+      "interFrameMs" : 133.315584,
+      "wireToEnqueueMs" : 72.278916,
+      "wireToPresentedMs" : 90.24487500000001
+    },
+    {
+      "enqueueToPresentedMs" : 17.61875,
+      "frameIndex" : 35,
+      "interFrameMs" : 141.669958,
+      "wireToEnqueueMs" : 75.40825,
+      "wireToPresentedMs" : 93.027
+    },
+    {
+      "enqueueToPresentedMs" : 18.657957999999997,
+      "frameIndex" : 36,
+      "interFrameMs" : 133.327208,
+      "wireToEnqueueMs" : 73.506083,
+      "wireToPresentedMs" : 92.164041
+    },
+    {
+      "enqueueToPresentedMs" : 16.161875,
+      "frameIndex" : 37,
+      "interFrameMs" : 133.357959,
+      "wireToEnqueueMs" : 78.08108399999999,
+      "wireToPresentedMs" : 94.242959
+    },
+    {
+      "enqueueToPresentedMs" : 21.955,
+      "frameIndex" : 38,
+      "interFrameMs" : 133.310541,
+      "wireToEnqueueMs" : 71.681833,
+      "wireToPresentedMs" : 93.636833
+    },
+    {
+      "enqueueToPresentedMs" : 21.680166,
+      "frameIndex" : 39,
+      "interFrameMs" : 124.99775000000001,
+      "wireToEnqueueMs" : 69.53395900000001,
+      "wireToPresentedMs" : 91.214125
+    },
+    {
+      "enqueueToPresentedMs" : 23.699667,
+      "frameIndex" : 40,
+      "interFrameMs" : 133.357167,
+      "wireToEnqueueMs" : 69.07675,
+      "wireToPresentedMs" : 92.776417
+    },
+    {
+      "enqueueToPresentedMs" : 18.667625,
+      "frameIndex" : 41,
+      "interFrameMs" : 124.99220799999999,
+      "wireToEnqueueMs" : 71.399541,
+      "wireToPresentedMs" : 90.067166
+    },
+    {
+      "enqueueToPresentedMs" : 21.110875,
+      "frameIndex" : 42,
+      "interFrameMs" : 133.325209,
+      "wireToEnqueueMs" : 73.985084,
+      "wireToPresentedMs" : 95.095959
+    },
+    {
+      "enqueueToPresentedMs" : 23.927416,
+      "frameIndex" : 43,
+      "interFrameMs" : 158.325916,
+      "wireToEnqueueMs" : 95.379334,
+      "wireToPresentedMs" : 119.30675000000001
+    },
+    {
+      "enqueueToPresentedMs" : 20.979458,
+      "frameIndex" : 44,
+      "interFrameMs" : 141.661667,
+      "wireToEnqueueMs" : 77.470834,
+      "wireToPresentedMs" : 98.45029199999999
+    },
+    {
+      "enqueueToPresentedMs" : 19.874083000000002,
+      "frameIndex" : 45,
+      "interFrameMs" : 158.3425,
+      "wireToEnqueueMs" : 97.70029199999999,
+      "wireToPresentedMs" : 117.57437499999999
+    },
+    {
+      "enqueueToPresentedMs" : 21.662708,
+      "frameIndex" : 46,
+      "interFrameMs" : 233.338875,
+      "wireToEnqueueMs" : 106.56966700000001,
+      "wireToPresentedMs" : 128.23237500000002
+    },
+    {
+      "enqueueToPresentedMs" : 20.165958,
+      "frameIndex" : 47,
+      "interFrameMs" : 191.663833,
+      "wireToEnqueueMs" : 108.371,
+      "wireToPresentedMs" : 128.536958
+    },
+    {
+      "enqueueToPresentedMs" : 15.909541999999998,
+      "frameIndex" : 48,
+      "interFrameMs" : 166.675042,
+      "wireToEnqueueMs" : 101.034166,
+      "wireToPresentedMs" : 116.94370799999999
+    },
+    {
+      "enqueueToPresentedMs" : 20.410749999999997,
+      "frameIndex" : 49,
+      "interFrameMs" : 158.344458,
+      "wireToEnqueueMs" : 95.101375,
+      "wireToPresentedMs" : 115.512125
+    },
+    {
+      "enqueueToPresentedMs" : 21.597875,
+      "frameIndex" : 50,
+      "interFrameMs" : 166.671084,
+      "wireToEnqueueMs" : 107.217125,
+      "wireToPresentedMs" : 128.81500000000003
+    },
+    {
+      "enqueueToPresentedMs" : 22.347292,
+      "frameIndex" : 51,
+      "interFrameMs" : 158.306833,
+      "wireToEnqueueMs" : 98.766916,
+      "wireToPresentedMs" : 121.114208
+    },
+    {
+      "enqueueToPresentedMs" : 22.186792,
+      "frameIndex" : 52,
+      "interFrameMs" : 208.325167,
+      "wireToEnqueueMs" : 103.065375,
+      "wireToPresentedMs" : 125.252167
+    },
+    {
+      "enqueueToPresentedMs" : 20.667417,
+      "frameIndex" : 53,
+      "interFrameMs" : 241.71162500000003,
+      "wireToEnqueueMs" : 152.274875,
+      "wireToPresentedMs" : 172.942292
+    },
+    {
+      "enqueueToPresentedMs" : 21.549167,
+      "frameIndex" : 54,
+      "interFrameMs" : 291.657125,
+      "wireToEnqueueMs" : 219.552875,
+      "wireToPresentedMs" : 241.10204199999998
+    },
+    {
+      "enqueueToPresentedMs" : 23.61825,
+      "frameIndex" : 55,
+      "interFrameMs" : 216.64320800000002,
+      "wireToEnqueueMs" : 122.319958,
+      "wireToPresentedMs" : 145.938208
+    },
+    {
+      "enqueueToPresentedMs" : 22.630417,
+      "frameIndex" : 56,
+      "interFrameMs" : 241.657375,
+      "wireToEnqueueMs" : 178.798916,
+      "wireToPresentedMs" : 201.42933299999999
+    },
+    {
+      "enqueueToPresentedMs" : 23.639208,
+      "frameIndex" : 57,
+      "interFrameMs" : 225.00825,
+      "wireToEnqueueMs" : 137.58520900000002,
+      "wireToPresentedMs" : 161.22441700000002
+    },
+    {
+      "enqueueToPresentedMs" : 18.28125,
+      "frameIndex" : 58,
+      "interFrameMs" : 158.347917,
+      "wireToEnqueueMs" : 99.891959,
+      "wireToPresentedMs" : 118.173209
+    },
+    {
+      "enqueueToPresentedMs" : 18.40625,
+      "frameIndex" : 59,
+      "interFrameMs" : 225.00829099999999,
+      "wireToEnqueueMs" : 138.578958,
+      "wireToPresentedMs" : 156.985208
+    },
+    {
+      "enqueueToPresentedMs" : 21.4655,
+      "frameIndex" : 60,
+      "interFrameMs" : 208.316459,
+      "wireToEnqueueMs" : 129.34625,
+      "wireToPresentedMs" : 150.81175
+    },
+    {
+      "enqueueToPresentedMs" : 20.543334,
+      "frameIndex" : 61,
+      "interFrameMs" : 250.011875,
+      "wireToEnqueueMs" : 183.589791,
+      "wireToPresentedMs" : 204.133125
+    },
+    {
+      "enqueueToPresentedMs" : 19.561416,
+      "frameIndex" : 62,
+      "interFrameMs" : 199.999916,
+      "wireToEnqueueMs" : 112.284459,
+      "wireToPresentedMs" : 131.845875
+    },
+    {
+      "enqueueToPresentedMs" : 23.434375,
+      "frameIndex" : 63,
+      "interFrameMs" : 183.31312499999999,
+      "wireToEnqueueMs" : 115.002875,
+      "wireToPresentedMs" : 138.43725
+    },
+    {
+      "enqueueToPresentedMs" : 20.026958,
+      "frameIndex" : 64,
+      "interFrameMs" : 200.02075,
+      "wireToEnqueueMs" : 130.307708,
+      "wireToPresentedMs" : 150.334666
+    },
+    {
+      "enqueueToPresentedMs" : 19.390833,
+      "frameIndex" : 65,
+      "interFrameMs" : 191.63425,
+      "wireToEnqueueMs" : 126.83187500000001,
+      "wireToPresentedMs" : 146.222708
+    },
+    {
+      "enqueueToPresentedMs" : 16.292625,
+      "frameIndex" : 66,
+      "interFrameMs" : 250.019459,
+      "wireToEnqueueMs" : 185.684334,
+      "wireToPresentedMs" : 201.97695900000002
+    },
+    {
+      "enqueueToPresentedMs" : 16.779708,
+      "frameIndex" : 67,
+      "interFrameMs" : 199.99308299999998,
+      "wireToEnqueueMs" : 112.991,
+      "wireToPresentedMs" : 129.770708
+    },
+    {
+      "enqueueToPresentedMs" : 20.756625,
+      "frameIndex" : 68,
+      "interFrameMs" : 175.036667,
+      "wireToEnqueueMs" : 108.982417,
+      "wireToPresentedMs" : 129.739042
+    },
+    {
+      "enqueueToPresentedMs" : 16.957791999999998,
+      "frameIndex" : 69,
+      "interFrameMs" : 199.974833,
+      "wireToEnqueueMs" : 101.598416,
+      "wireToPresentedMs" : 118.556208
+    },
+    {
+      "enqueueToPresentedMs" : 23.611583,
+      "frameIndex" : 70,
+      "interFrameMs" : 183.321333,
+      "wireToEnqueueMs" : 110.043125,
+      "wireToPresentedMs" : 133.654708
+    },
+    {
+      "enqueueToPresentedMs" : 17.005125,
+      "frameIndex" : 71,
+      "interFrameMs" : 150.035042,
+      "wireToEnqueueMs" : 92.83779200000001,
+      "wireToPresentedMs" : 109.842917
+    },
+    {
+      "enqueueToPresentedMs" : 15.947625,
+      "frameIndex" : 72,
+      "interFrameMs" : 183.314708,
+      "wireToEnqueueMs" : 94.121125,
+      "wireToPresentedMs" : 110.06875000000001
+    },
+    {
+      "enqueueToPresentedMs" : 23.384959000000002,
+      "frameIndex" : 73,
+      "interFrameMs" : 158.306209,
+      "wireToEnqueueMs" : 83.42016600000001,
+      "wireToPresentedMs" : 106.805125
+    },
+    {
+      "enqueueToPresentedMs" : 21.945375,
+      "frameIndex" : 74,
+      "interFrameMs" : 166.696125,
+      "wireToEnqueueMs" : 103.972125,
+      "wireToPresentedMs" : 125.91749999999999
+    },
+    {
+      "enqueueToPresentedMs" : 18.9185,
+      "frameIndex" : 75,
+      "interFrameMs" : 191.67795800000002,
+      "wireToEnqueueMs" : 83.500292,
+      "wireToPresentedMs" : 102.418792
+    },
+    {
+      "enqueueToPresentedMs" : 17.859292,
+      "frameIndex" : 76,
+      "interFrameMs" : 149.9745,
+      "wireToEnqueueMs" : 77.60175,
+      "wireToPresentedMs" : 95.46104199999999
+    },
+    {
+      "enqueueToPresentedMs" : 21.929375,
+      "frameIndex" : 77,
+      "interFrameMs" : 149.99458299999998,
+      "wireToEnqueueMs" : 79.977166,
+      "wireToPresentedMs" : 101.906541
+    },
+    {
+      "enqueueToPresentedMs" : 18.862083000000002,
+      "frameIndex" : 78,
+      "interFrameMs" : 200.009542,
+      "wireToEnqueueMs" : 141.77716700000002,
+      "wireToPresentedMs" : 160.63925
+    },
+    {
+      "enqueueToPresentedMs" : 16.866167,
+      "frameIndex" : 79,
+      "interFrameMs" : 150.03729199999998,
+      "wireToEnqueueMs" : 72.5565,
+      "wireToPresentedMs" : 89.422667
+    },
+    {
+      "enqueueToPresentedMs" : 19.296833,
+      "frameIndex" : 80,
+      "interFrameMs" : 141.610416,
+      "wireToEnqueueMs" : 70.041375,
+      "wireToPresentedMs" : 89.33820800000001
+    },
+    {
+      "enqueueToPresentedMs" : 16.759709,
+      "frameIndex" : 81,
+      "interFrameMs" : 216.668459,
+      "wireToEnqueueMs" : 149.174583,
+      "wireToPresentedMs" : 165.934292
+    },
+    {
+      "enqueueToPresentedMs" : 19.79825,
+      "frameIndex" : 82,
+      "interFrameMs" : 158.341458,
+      "wireToEnqueueMs" : 81.100375,
+      "wireToPresentedMs" : 100.89862500000001
+    },
+    {
+      "enqueueToPresentedMs" : 16.466417,
+      "frameIndex" : 83,
+      "interFrameMs" : 133.355625,
+      "wireToEnqueueMs" : 82.328416,
+      "wireToPresentedMs" : 98.794833
+    },
+    {
+      "enqueueToPresentedMs" : 19.000625,
+      "frameIndex" : 84,
+      "interFrameMs" : 133.33479200000002,
+      "wireToEnqueueMs" : 78.492959,
+      "wireToPresentedMs" : 97.493584
+    },
+    {
+      "enqueueToPresentedMs" : 18.22325,
+      "frameIndex" : 85,
+      "interFrameMs" : 133.331333,
+      "wireToEnqueueMs" : 77.88758299999999,
+      "wireToPresentedMs" : 96.11083300000001
+    },
+    {
+      "enqueueToPresentedMs" : 21.325833999999997,
+      "frameIndex" : 86,
+      "interFrameMs" : 141.680542,
+      "wireToEnqueueMs" : 83.98195799999999,
+      "wireToPresentedMs" : 105.30779199999999
+    },
+    {
+      "enqueueToPresentedMs" : 20.658125,
+      "frameIndex" : 87,
+      "interFrameMs" : 133.282625,
+      "wireToEnqueueMs" : 82.284334,
+      "wireToPresentedMs" : 102.942459
+    },
+    {
+      "enqueueToPresentedMs" : 23.238667,
+      "frameIndex" : 88,
+      "interFrameMs" : 208.374208,
+      "wireToEnqueueMs" : 153.190708,
+      "wireToPresentedMs" : 176.429375
+    },
+    {
+      "enqueueToPresentedMs" : 19.247916,
+      "frameIndex" : 89,
+      "interFrameMs" : 49.998083,
+      "wireToEnqueueMs" : 53.929959,
+      "wireToPresentedMs" : 73.177875
+    },
+    {
+      "enqueueToPresentedMs" : 18.588,
+      "frameIndex" : 90,
+      "interFrameMs" : 141.6365,
+      "wireToEnqueueMs" : 78.09070799999999,
+      "wireToPresentedMs" : 96.678708
+    },
+    {
+      "enqueueToPresentedMs" : 21.556083,
+      "frameIndex" : 91,
+      "interFrameMs" : 141.689292,
+      "wireToEnqueueMs" : 85.302667,
+      "wireToPresentedMs" : 106.85875
+    },
+    {
+      "enqueueToPresentedMs" : 18.577083000000002,
+      "frameIndex" : 92,
+      "interFrameMs" : 224.990333,
+      "wireToEnqueueMs" : 172.399375,
+      "wireToPresentedMs" : 190.97645799999998
+    },
+    {
+      "enqueueToPresentedMs" : 19.851958,
+      "frameIndex" : 93,
+      "interFrameMs" : 149.98666699999998,
+      "wireToEnqueueMs" : 77.207334,
+      "wireToPresentedMs" : 97.059292
+    },
+    {
+      "enqueueToPresentedMs" : 19.599375,
+      "frameIndex" : 94,
+      "interFrameMs" : 133.35966699999997,
+      "wireToEnqueueMs" : 80.34512500000001,
+      "wireToPresentedMs" : 99.9445
+    },
+    {
+      "enqueueToPresentedMs" : 21.034582999999998,
+      "frameIndex" : 95,
+      "interFrameMs" : 133.309916,
+      "wireToEnqueueMs" : 82.61270800000001,
+      "wireToPresentedMs" : 103.647291
+    },
+    {
+      "enqueueToPresentedMs" : 20.484375,
+      "frameIndex" : 96,
+      "interFrameMs" : 125.003375,
+      "wireToEnqueueMs" : 76.73387500000001,
+      "wireToPresentedMs" : 97.21825000000001
+    },
+    {
+      "enqueueToPresentedMs" : 22.193333,
+      "frameIndex" : 97,
+      "interFrameMs" : 133.346042,
+      "wireToEnqueueMs" : 74.984292,
+      "wireToPresentedMs" : 97.177625
+    },
+    {
+      "enqueueToPresentedMs" : 20.591292,
+      "frameIndex" : 98,
+      "interFrameMs" : 133.312667,
+      "wireToEnqueueMs" : 82.10941700000001,
+      "wireToPresentedMs" : 102.700709
+    },
+    {
+      "enqueueToPresentedMs" : 16.533042000000002,
+      "frameIndex" : 99,
+      "interFrameMs" : 108.364625,
+      "wireToEnqueueMs" : 61.090625,
+      "wireToPresentedMs" : 77.623667
+    },
+    {
+      "enqueueToPresentedMs" : 22.133333,
+      "frameIndex" : 100,
+      "interFrameMs" : 141.63833300000002,
+      "wireToEnqueueMs" : 62.6885,
+      "wireToPresentedMs" : 84.821833
+    },
+    {
+      "enqueueToPresentedMs" : 18.805041000000003,
+      "frameIndex" : 101,
+      "interFrameMs" : 125.002583,
+      "wireToEnqueueMs" : 62.745875000000005,
+      "wireToPresentedMs" : 81.550916
+    },
+    {
+      "enqueueToPresentedMs" : 22.328333999999998,
+      "frameIndex" : 102,
+      "interFrameMs" : 141.677209,
+      "wireToEnqueueMs" : 69.336416,
+      "wireToPresentedMs" : 91.66475
+    },
+    {
+      "enqueueToPresentedMs" : 16.977417000000003,
+      "frameIndex" : 103,
+      "interFrameMs" : 124.983833,
+      "wireToEnqueueMs" : 69.354791,
+      "wireToPresentedMs" : 86.332208
+    },
+    {
+      "enqueueToPresentedMs" : 16.332541,
+      "frameIndex" : 104,
+      "interFrameMs" : 125.00208300000001,
+      "wireToEnqueueMs" : 64.451125,
+      "wireToPresentedMs" : 80.78366600000001
+    },
+    {
+      "enqueueToPresentedMs" : 22.252584,
+      "frameIndex" : 105,
+      "interFrameMs" : 133.327834,
+      "wireToEnqueueMs" : 65.688583,
+      "wireToPresentedMs" : 87.94116700000001
+    },
+    {
+      "enqueueToPresentedMs" : 22.802375,
+      "frameIndex" : 106,
+      "interFrameMs" : 133.348041,
+      "wireToEnqueueMs" : 71.640916,
+      "wireToPresentedMs" : 94.443291
+    },
+    {
+      "enqueueToPresentedMs" : 23.750542,
+      "frameIndex" : 107,
+      "interFrameMs" : 125.048459,
+      "wireToEnqueueMs" : 69.9565,
+      "wireToPresentedMs" : 93.707042
+    },
+    {
+      "enqueueToPresentedMs" : 20.850417,
+      "frameIndex" : 108,
+      "interFrameMs" : 141.61812500000002,
+      "wireToEnqueueMs" : 79.833083,
+      "wireToPresentedMs" : 100.6835
+    },
+    {
+      "enqueueToPresentedMs" : 15.926084,
+      "frameIndex" : 109,
+      "interFrameMs" : 133.31787500000002,
+      "wireToEnqueueMs" : 77.68162500000001,
+      "wireToPresentedMs" : 93.607709
+    },
+    {
+      "enqueueToPresentedMs" : 21.761083,
+      "frameIndex" : 110,
+      "interFrameMs" : 141.710166,
+      "wireToEnqueueMs" : 79.537792,
+      "wireToPresentedMs" : 101.298875
+    },
+    {
+      "enqueueToPresentedMs" : 18.465875,
+      "frameIndex" : 111,
+      "interFrameMs" : 141.651625,
+      "wireToEnqueueMs" : 87.385666,
+      "wireToPresentedMs" : 105.851541
+    },
+    {
+      "enqueueToPresentedMs" : 23.04025,
+      "frameIndex" : 112,
+      "interFrameMs" : 183.3035,
+      "wireToEnqueueMs" : 117.446416,
+      "wireToPresentedMs" : 140.486666
+    },
+    {
+      "enqueueToPresentedMs" : 20.855584,
+      "frameIndex" : 113,
+      "interFrameMs" : 141.667459,
+      "wireToEnqueueMs" : 74.957666,
+      "wireToPresentedMs" : 95.81325
+    },
+    {
+      "enqueueToPresentedMs" : 19.246834,
+      "frameIndex" : 114,
+      "interFrameMs" : 133.34025,
+      "wireToEnqueueMs" : 79.530208,
+      "wireToPresentedMs" : 98.777042
+    },
+    {
+      "enqueueToPresentedMs" : 19.959958,
+      "frameIndex" : 115,
+      "interFrameMs" : 166.676416,
+      "wireToEnqueueMs" : 74.250708,
+      "wireToPresentedMs" : 94.210666
+    },
+    {
+      "enqueueToPresentedMs" : 17.019667,
+      "frameIndex" : 116,
+      "interFrameMs" : 141.655042,
+      "wireToEnqueueMs" : 83.55462499999999,
+      "wireToPresentedMs" : 100.574292
+    },
+    {
+      "enqueueToPresentedMs" : 19.028791,
+      "frameIndex" : 117,
+      "interFrameMs" : 133.344833,
+      "wireToEnqueueMs" : 73.03099999999999,
+      "wireToPresentedMs" : 92.059791
+    },
+    {
+      "enqueueToPresentedMs" : 16.355833999999998,
+      "frameIndex" : 118,
+      "interFrameMs" : 191.686209,
+      "wireToEnqueueMs" : 135.62508300000002,
+      "wireToPresentedMs" : 151.980917
+    },
+    {
+      "enqueueToPresentedMs" : 16.513625,
+      "frameIndex" : 119,
+      "interFrameMs" : 58.305457999999994,
+      "wireToEnqueueMs" : 58.106875,
+      "wireToPresentedMs" : 74.6205
+    },
+    {
+      "enqueueToPresentedMs" : 22.607125,
+      "frameIndex" : 120,
+      "interFrameMs" : 141.679958,
+      "wireToEnqueueMs" : 69.00137500000001,
+      "wireToPresentedMs" : 91.60849999999999
+    },
+    {
+      "enqueueToPresentedMs" : 22.430875,
+      "frameIndex" : 121,
+      "interFrameMs" : 125.01262499999999,
+      "wireToEnqueueMs" : 69.238541,
+      "wireToPresentedMs" : 91.669416
+    },
+    {
+      "enqueueToPresentedMs" : 19.464041,
+      "frameIndex" : 122,
+      "interFrameMs" : 125.00512499999999,
+      "wireToEnqueueMs" : 68.86487500000001,
+      "wireToPresentedMs" : 88.32891599999999
+    },
+    {
+      "enqueueToPresentedMs" : 19.973375,
+      "frameIndex" : 123,
+      "interFrameMs" : 133.340667,
+      "wireToEnqueueMs" : 73.75354200000001,
+      "wireToPresentedMs" : 93.726917
+    },
+    {
+      "enqueueToPresentedMs" : 17.104875,
+      "frameIndex" : 124,
+      "interFrameMs" : 124.983583,
+      "wireToEnqueueMs" : 75.57562499999999,
+      "wireToPresentedMs" : 92.6805
+    },
+    {
+      "enqueueToPresentedMs" : 16.886666,
+      "frameIndex" : 125,
+      "interFrameMs" : 124.977375,
+      "wireToEnqueueMs" : 68.414709,
+      "wireToPresentedMs" : 85.301375
+    },
+    {
+      "enqueueToPresentedMs" : 16.155541999999997,
+      "frameIndex" : 126,
+      "interFrameMs" : 125.03345900000001,
+      "wireToEnqueueMs" : 67.195667,
+      "wireToPresentedMs" : 83.351209
+    },
+    {
+      "enqueueToPresentedMs" : 20.688374999999997,
+      "frameIndex" : 127,
+      "interFrameMs" : 141.637291,
+      "wireToEnqueueMs" : 66.964208,
+      "wireToPresentedMs" : 87.652583
+    },
+    {
+      "enqueueToPresentedMs" : 21.343500000000002,
+      "frameIndex" : 128,
+      "interFrameMs" : 133.3485,
+      "wireToEnqueueMs" : 72.78775,
+      "wireToPresentedMs" : 94.13125
+    },
+    {
+      "enqueueToPresentedMs" : 16.349125,
+      "frameIndex" : 129,
+      "interFrameMs" : 125.009584,
+      "wireToEnqueueMs" : 71.915917,
+      "wireToPresentedMs" : 88.26504200000001
+    },
+    {
+      "enqueueToPresentedMs" : 20.969667,
+      "frameIndex" : 130,
+      "interFrameMs" : 141.648958,
+      "wireToEnqueueMs" : 73.41520799999999,
+      "wireToPresentedMs" : 94.384875
+    },
+    {
+      "enqueueToPresentedMs" : 18.777417,
+      "frameIndex" : 131,
+      "interFrameMs" : 133.347542,
+      "wireToEnqueueMs" : 78.209833,
+      "wireToPresentedMs" : 96.98725
+    },
+    {
+      "enqueueToPresentedMs" : 16.071665999999997,
+      "frameIndex" : 132,
+      "interFrameMs" : 125.01391600000001,
+      "wireToEnqueueMs" : 73.232,
+      "wireToPresentedMs" : 89.303666
+    },
+    {
+      "enqueueToPresentedMs" : 21.610333,
+      "frameIndex" : 133,
+      "interFrameMs" : 133.3355,
+      "wireToEnqueueMs" : 71.602083,
+      "wireToPresentedMs" : 93.212416
+    },
+    {
+      "enqueueToPresentedMs" : 17.045082999999998,
+      "frameIndex" : 134,
+      "interFrameMs" : 133.3315,
+      "wireToEnqueueMs" : 79.789417,
+      "wireToPresentedMs" : 96.8345
+    },
+    {
+      "enqueueToPresentedMs" : 20.552332999999997,
+      "frameIndex" : 135,
+      "interFrameMs" : 133.312,
+      "wireToEnqueueMs" : 66.07308300000001,
+      "wireToPresentedMs" : 86.625416
+    },
+    {
+      "enqueueToPresentedMs" : 18.072542000000002,
+      "frameIndex" : 136,
+      "interFrameMs" : 124.984834,
+      "wireToEnqueueMs" : 70.316667,
+      "wireToPresentedMs" : 88.389209
+    },
+    {
+      "enqueueToPresentedMs" : 16.054959,
+      "frameIndex" : 137,
+      "interFrameMs" : 125.008375,
+      "wireToEnqueueMs" : 70.890375,
+      "wireToPresentedMs" : 86.945334
+    },
+    {
+      "enqueueToPresentedMs" : 21.356792,
+      "frameIndex" : 138,
+      "interFrameMs" : 133.356875,
+      "wireToEnqueueMs" : 72.621833,
+      "wireToPresentedMs" : 93.978625
+    },
+    {
+      "enqueueToPresentedMs" : 16.094792,
+      "frameIndex" : 139,
+      "interFrameMs" : 133.392125,
+      "wireToEnqueueMs" : 74.355,
+      "wireToPresentedMs" : 90.449792
+    },
+    {
+      "enqueueToPresentedMs" : 21.088208,
+      "frameIndex" : 140,
+      "interFrameMs" : 133.240333,
+      "wireToEnqueueMs" : 72.68466699999999,
+      "wireToPresentedMs" : 93.772875
+    },
+    {
+      "enqueueToPresentedMs" : 23.086875,
+      "frameIndex" : 141,
+      "interFrameMs" : 124.986958,
+      "wireToEnqueueMs" : 70.690208,
+      "wireToPresentedMs" : 93.77708299999999
+    },
+    {
+      "enqueueToPresentedMs" : 19.717125,
+      "frameIndex" : 142,
+      "interFrameMs" : 133.38525,
+      "wireToEnqueueMs" : 78.82870799999999,
+      "wireToPresentedMs" : 98.545833
+    },
+    {
+      "enqueueToPresentedMs" : 19.573792,
+      "frameIndex" : 143,
+      "interFrameMs" : 149.99170900000001,
+      "wireToEnqueueMs" : 86.585667,
+      "wireToPresentedMs" : 106.159459
+    },
+    {
+      "enqueueToPresentedMs" : 17.265542,
+      "frameIndex" : 144,
+      "interFrameMs" : 133.331708,
+      "wireToEnqueueMs" : 79.991291,
+      "wireToPresentedMs" : 97.256833
+    },
+    {
+      "enqueueToPresentedMs" : 18.487667,
+      "frameIndex" : 145,
+      "interFrameMs" : 124.976292,
+      "wireToEnqueueMs" : 71.181667,
+      "wireToPresentedMs" : 89.669334
+    },
+    {
+      "enqueueToPresentedMs" : 18.194584,
+      "frameIndex" : 146,
+      "interFrameMs" : 141.679125,
+      "wireToEnqueueMs" : 83.436083,
+      "wireToPresentedMs" : 101.63066699999999
+    },
+    {
+      "enqueueToPresentedMs" : 23.260541999999997,
+      "frameIndex" : 147,
+      "interFrameMs" : 191.665375,
+      "wireToEnqueueMs" : 142.99758300000002,
+      "wireToPresentedMs" : 166.258125
+    },
+    {
+      "enqueueToPresentedMs" : 18.78175,
+      "frameIndex" : 148,
+      "interFrameMs" : 175.013333,
+      "wireToEnqueueMs" : 116.318667,
+      "wireToPresentedMs" : 135.100417
+    },
+    {
+      "enqueueToPresentedMs" : 20.852583,
+      "frameIndex" : 149,
+      "interFrameMs" : 249.97150000000002,
+      "wireToEnqueueMs" : 183.21633400000002,
+      "wireToPresentedMs" : 204.068917
+    },
+    {
+      "enqueueToPresentedMs" : 20.1595,
+      "frameIndex" : 150,
+      "interFrameMs" : 150.019667,
+      "wireToEnqueueMs" : 88.014334,
+      "wireToPresentedMs" : 108.173834
+    },
+    {
+      "enqueueToPresentedMs" : 19.461375,
+      "frameIndex" : 151,
+      "interFrameMs" : 133.338416,
+      "wireToEnqueueMs" : 81.01354099999999,
+      "wireToPresentedMs" : 100.474916
+    },
+    {
+      "enqueueToPresentedMs" : 21.958666,
+      "frameIndex" : 152,
+      "interFrameMs" : 141.66424999999998,
+      "wireToEnqueueMs" : 81.81108400000001,
+      "wireToPresentedMs" : 103.76974999999999
+    },
+    {
+      "enqueueToPresentedMs" : 23.63825,
+      "frameIndex" : 153,
+      "interFrameMs" : 124.997125,
+      "wireToEnqueueMs" : 68.854916,
+      "wireToPresentedMs" : 92.493166
+    },
+    {
+      "enqueueToPresentedMs" : 18.983875,
+      "frameIndex" : 154,
+      "interFrameMs" : 133.316,
+      "wireToEnqueueMs" : 80.038625,
+      "wireToPresentedMs" : 99.0225
+    },
+    {
+      "enqueueToPresentedMs" : 22.798792,
+      "frameIndex" : 155,
+      "interFrameMs" : 133.339834,
+      "wireToEnqueueMs" : 71.322,
+      "wireToPresentedMs" : 94.120792
+    },
+    {
+      "enqueueToPresentedMs" : 22.644707999999998,
+      "frameIndex" : 156,
+      "interFrameMs" : 124.979166,
+      "wireToEnqueueMs" : 71.032208,
+      "wireToPresentedMs" : 93.676916
+    },
+    {
+      "enqueueToPresentedMs" : 19.818875,
+      "frameIndex" : 157,
+      "interFrameMs" : 125.11375,
+      "wireToEnqueueMs" : 73.071125,
+      "wireToPresentedMs" : 92.89
+    },
+    {
+      "enqueueToPresentedMs" : 16.229917,
+      "frameIndex" : 158,
+      "interFrameMs" : 124.90633399999999,
+      "wireToEnqueueMs" : 75.94095800000001,
+      "wireToPresentedMs" : 92.170875
+    },
+    {
+      "enqueueToPresentedMs" : 17.830916,
+      "frameIndex" : 159,
+      "interFrameMs" : 133.32766600000002,
+      "wireToEnqueueMs" : 80.631167,
+      "wireToPresentedMs" : 98.462083
+    },
+    {
+      "enqueueToPresentedMs" : 18.324582999999997,
+      "frameIndex" : 160,
+      "interFrameMs" : 216.668667,
+      "wireToEnqueueMs" : 159.16212499999997,
+      "wireToPresentedMs" : 177.486708
+    },
+    {
+      "enqueueToPresentedMs" : 19.134375,
+      "frameIndex" : 161,
+      "interFrameMs" : 58.3885,
+      "wireToEnqueueMs" : 57.49925,
+      "wireToPresentedMs" : 76.633625
+    },
+    {
+      "enqueueToPresentedMs" : 24.102999999999998,
+      "frameIndex" : 162,
+      "interFrameMs" : 166.647458,
+      "wireToEnqueueMs" : 103.416375,
+      "wireToPresentedMs" : 127.519375
+    },
+    {
+      "enqueueToPresentedMs" : 16.92325,
+      "frameIndex" : 163,
+      "interFrameMs" : 133.298917,
+      "wireToEnqueueMs" : 77.95320799999999,
+      "wireToPresentedMs" : 94.876458
+    },
+    {
+      "enqueueToPresentedMs" : 22.818084,
+      "frameIndex" : 164,
+      "interFrameMs" : 208.334542,
+      "wireToEnqueueMs" : 129.961541,
+      "wireToPresentedMs" : 152.779625
+    },
+    {
+      "enqueueToPresentedMs" : 18.638042000000002,
+      "frameIndex" : 165,
+      "interFrameMs" : 141.74420800000001,
+      "wireToEnqueueMs" : 82.454166,
+      "wireToPresentedMs" : 101.092208
+    },
+    {
+      "enqueueToPresentedMs" : 18.634458,
+      "frameIndex" : 166,
+      "interFrameMs" : 133.31270800000001,
+      "wireToEnqueueMs" : 76.919083,
+      "wireToPresentedMs" : 95.55354100000001
+    },
+    {
+      "enqueueToPresentedMs" : 18.383291999999997,
+      "frameIndex" : 167,
+      "interFrameMs" : 224.948959,
+      "wireToEnqueueMs" : 169.386292,
+      "wireToPresentedMs" : 187.76958399999998
+    },
+    {
+      "enqueueToPresentedMs" : 16.985792,
+      "frameIndex" : 168,
+      "interFrameMs" : 75.045125,
+      "wireToEnqueueMs" : 76.358333,
+      "wireToPresentedMs" : 93.344125
+    },
+    {
+      "enqueueToPresentedMs" : 16.731584,
+      "frameIndex" : 169,
+      "interFrameMs" : 141.688625,
+      "wireToEnqueueMs" : 73.90125,
+      "wireToPresentedMs" : 90.632834
+    },
+    {
+      "enqueueToPresentedMs" : 15.898791,
+      "frameIndex" : 170,
+      "interFrameMs" : 124.952916,
+      "wireToEnqueueMs" : 65.18825,
+      "wireToPresentedMs" : 81.087041
+    },
+    {
+      "enqueueToPresentedMs" : 22.940584,
+      "frameIndex" : 171,
+      "interFrameMs" : 191.62870900000001,
+      "wireToEnqueueMs" : 124.53037499999999,
+      "wireToPresentedMs" : 147.47095900000002
+    },
+    {
+      "enqueueToPresentedMs" : 20.703166,
+      "frameIndex" : 172,
+      "interFrameMs" : 158.423291,
+      "wireToEnqueueMs" : 88.401417,
+      "wireToPresentedMs" : 109.104583
+    },
+    {
+      "enqueueToPresentedMs" : 19.784125,
+      "frameIndex" : 173,
+      "interFrameMs" : 158.274375,
+      "wireToEnqueueMs" : 98.97408300000001,
+      "wireToPresentedMs" : 118.75820800000001
+    },
+    {
+      "enqueueToPresentedMs" : 22.298208,
+      "frameIndex" : 174,
+      "interFrameMs" : 199.982375,
+      "wireToEnqueueMs" : 158.974958,
+      "wireToPresentedMs" : 181.273166
+    },
+    {
+      "enqueueToPresentedMs" : 22.45425,
+      "frameIndex" : 175,
+      "interFrameMs" : 174.978792,
+      "wireToEnqueueMs" : 93.114375,
+      "wireToPresentedMs" : 115.568625
+    },
+    {
+      "enqueueToPresentedMs" : 18.060166,
+      "frameIndex" : 176,
+      "interFrameMs" : 150.07520799999998,
+      "wireToEnqueueMs" : 85.117792,
+      "wireToPresentedMs" : 103.177958
+    },
+    {
+      "enqueueToPresentedMs" : 17.803834000000002,
+      "frameIndex" : 177,
+      "interFrameMs" : 199.963709,
+      "wireToEnqueueMs" : 139.276041,
+      "wireToPresentedMs" : 157.07987500000002
+    },
+    {
+      "enqueueToPresentedMs" : 16.832791999999998,
+      "frameIndex" : 178,
+      "interFrameMs" : 158.296833,
+      "wireToEnqueueMs" : 87.95620799999999,
+      "wireToPresentedMs" : 104.78899999999999
+    },
+    {
+      "enqueueToPresentedMs" : 17.988041,
+      "frameIndex" : 179,
+      "interFrameMs" : 166.686958,
+      "wireToEnqueueMs" : 94.36770899999999,
+      "wireToPresentedMs" : 112.35575
+    },
+    {
+      "enqueueToPresentedMs" : 22.86225,
+      "frameIndex" : 180,
+      "interFrameMs" : 233.315334,
+      "wireToEnqueueMs" : 163.679459,
+      "wireToPresentedMs" : 186.541709
+    },
+    {
+      "enqueueToPresentedMs" : 19.475709000000002,
+      "frameIndex" : 181,
+      "interFrameMs" : 191.70237500000002,
+      "wireToEnqueueMs" : 113.717666,
+      "wireToPresentedMs" : 133.193375
+    },
+    {
+      "enqueueToPresentedMs" : 23.390207999999998,
+      "frameIndex" : 182,
+      "interFrameMs" : 166.635666,
+      "wireToEnqueueMs" : 94.964125,
+      "wireToPresentedMs" : 118.35433300000001
+    },
+    {
+      "enqueueToPresentedMs" : 21.2945,
+      "frameIndex" : 183,
+      "interFrameMs" : 200.068709,
+      "wireToEnqueueMs" : 111.339209,
+      "wireToPresentedMs" : 132.63370899999998
+    },
+    {
+      "enqueueToPresentedMs" : 16.786208000000002,
+      "frameIndex" : 184,
+      "interFrameMs" : 99.935416,
+      "wireToEnqueueMs" : 102.139792,
+      "wireToPresentedMs" : 118.926
+    },
+    {
+      "enqueueToPresentedMs" : 16.397416,
+      "frameIndex" : 185,
+      "interFrameMs" : 166.69,
+      "wireToEnqueueMs" : 103.32554200000001,
+      "wireToPresentedMs" : 119.722958
+    },
+    {
+      "enqueueToPresentedMs" : 17.954874999999998,
+      "frameIndex" : 186,
+      "interFrameMs" : 249.984334,
+      "wireToEnqueueMs" : 182.53725,
+      "wireToPresentedMs" : 200.492125
+    },
+    {
+      "enqueueToPresentedMs" : 24.097792,
+      "frameIndex" : 187,
+      "interFrameMs" : 191.71883300000002,
+      "wireToEnqueueMs" : 99.104208,
+      "wireToPresentedMs" : 123.20200000000001
+    },
+    {
+      "enqueueToPresentedMs" : 15.867625,
+      "frameIndex" : 188,
+      "interFrameMs" : 149.965625,
+      "wireToEnqueueMs" : 94.144,
+      "wireToPresentedMs" : 110.011625
+    },
+    {
+      "enqueueToPresentedMs" : 21.042334,
+      "frameIndex" : 189,
+      "interFrameMs" : 191.65516699999998,
+      "wireToEnqueueMs" : 112.89645800000001,
+      "wireToPresentedMs" : 133.938792
+    },
+    {
+      "enqueueToPresentedMs" : 16.647709,
+      "frameIndex" : 190,
+      "interFrameMs" : 183.33525,
+      "wireToEnqueueMs" : 113.489958,
+      "wireToPresentedMs" : 130.13766700000002
+    },
+    {
+      "enqueueToPresentedMs" : 22.499458999999998,
+      "frameIndex" : 191,
+      "interFrameMs" : 376099.980375,
+      "wireToEnqueueMs" : 119.76041599999999,
+      "wireToPresentedMs" : 142.259875
+    }
+  ],
+  "schemaVersion" : 1,
+  "summary" : {
+    "stages" : [
+      {
+        "count" : 192,
+        "max" : 219.552875,
+        "mean" : 90.65576450000002,
+        "min" : 51.65,
+        "name" : "wireToEnqueueMs",
+        "p50" : 79.53399999999999,
+        "p95" : 159.05918314999997,
+        "p99" : 183.77829987
+      },
+      {
+        "count" : 192,
+        "max" : 24.102999999999998,
+        "mean" : 19.679426666666668,
+        "min" : 4.074042,
+        "name" : "enqueueToPresentedMs",
+        "p50" : 19.65825,
+        "p95" : 23.64256455,
+        "p99" : 24.097716469999998
+      },
+      {
+        "count" : 192,
+        "max" : 241.10204199999998,
+        "mean" : 110.33519116666662,
+        "min" : 68.535916,
+        "name" : "wireToPresentedMs",
+        "p50" : 98.4561875,
+        "p95" : 179.19061409999995,
+        "p99" : 204.07469572
+      },
+      {
+        "count" : 191,
+        "max" : 376099.980375,
+        "mean" : 2121.200217277487,
+        "min" : 49.998083,
+        "name" : "interFrameMs",
+        "p50" : 141.655042,
+        "p95" : 229.1618125,
+        "p99" : 254.1832255999998
+      }
+    ]
+  }
+}

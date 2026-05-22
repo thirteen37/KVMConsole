@@ -18,7 +18,7 @@ final class RFBFramebufferTests: XCTestCase {
         XCTAssertEqual(try framebuffer.pixelBytes(), pixels)
     }
 
-    func test_applyCopyRectCopiesOverlappingRegionsThroughScratchBuffer() throws {
+    func test_applyCopyRectCopiesOverlappingRegions() throws {
         let framebuffer = RFBFramebuffer()
         try framebuffer.resize(width: 3, height: 1)
         try framebuffer.applyRaw(

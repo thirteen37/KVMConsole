@@ -1,3 +1,4 @@
+@preconcurrency import CoreMedia
 import Foundation
 
 public enum GLKVMH264MediaError: Error, LocalizedError, Equatable {
@@ -95,10 +96,18 @@ public final class GLKVMH264MediaSocket: @unchecked Sendable {
                             try await self?.handle(text: text, task: webSocketTask)
                         case .data(let data):
                             guard let self else { continue }
+                            let wireArrival = CMClockGetTime(CMClockGetHostTimeClock())
                             let timestamp = DispatchTime.now().uptimeNanoseconds / 1_000
                             if let frame = try GLKVMDirectH264FrameParser.parse(data, timestampMicros: timestamp) {
                                 self.logFirstFrameIfNeeded(frame)
-                                frameSequencer.recordYield(continuation.yield(frameSequencer.nextFrame(from: frame)))
+                                let stamped = H264StreamFrame(
+                                    isKeyFrame: frame.isKeyFrame,
+                                    timestampMicros: frame.timestampMicros,
+                                    payload: frame.payload,
+                                    sequenceNumber: frame.sequenceNumber,
+                                    wireArrivalHostTime: wireArrival
+                                )
+                                frameSequencer.recordYield(continuation.yield(frameSequencer.nextFrame(from: stamped)))
                             }
                         @unknown default:
                             throw GLKVMH264MediaError.unsupportedMessage

@@ -113,11 +113,20 @@ public final class H264Decoder: @unchecked Sendable {
         let sampleBuffer = try makeSampleBuffer(from: sampleUnits, timestampMicros: frame.timestampMicros)
         guard let decompressionSession else { return }
 
+        let context = Unmanaged.passRetained(
+            H264FrameDecodeContext(wireArrivalHostTime: frame.wireArrivalHostTime)
+        )
+        // The output callback always consumes the +1 retain via
+        // `takeRetainedValue()`. VT can still surface a non-zero status from
+        // `DecodeFrame` after the callback has run (e.g. during stream resync),
+        // so we must not release here too — that would double-free. If VT ever
+        // returns an error without invoking the callback the context leaks,
+        // which is bounded and far safer than a crash.
         let status = VTDecompressionSessionDecodeFrame(
             decompressionSession,
             sampleBuffer: sampleBuffer,
             flags: [],
-            frameRefcon: nil,
+            frameRefcon: context.toOpaque(),
             infoFlagsOut: nil
         )
         guard status == noErr else { throw H264DecoderError.decode(status) }
@@ -257,7 +266,8 @@ public final class H264Decoder: @unchecked Sendable {
         status: OSStatus,
         imageBuffer: CVImageBuffer?,
         presentationTimeStamp: CMTime,
-        duration: CMTime
+        duration: CMTime,
+        wireArrivalHostTime: CMTime?
     ) {
         guard status == noErr, let imageBuffer else { return }
 
@@ -285,6 +295,9 @@ public final class H264Decoder: @unchecked Sendable {
         guard sampleStatus == noErr, let decodedSampleBuffer else { return }
 
         markDisplayImmediately(decodedSampleBuffer)
+        if let wireArrivalHostTime {
+            SampleBufferLatencyTag.attachWireArrivalHostTime(wireArrivalHostTime, to: decodedSampleBuffer)
+        }
         output(decodedSampleBuffer)
     }
 
@@ -304,13 +317,27 @@ public final class H264Decoder: @unchecked Sendable {
     }
 }
 
-private let decompressionOutputCallback: VTDecompressionOutputCallback = { refCon, _, status, _, imageBuffer, presentationTimeStamp, duration in
+private let decompressionOutputCallback: VTDecompressionOutputCallback = { refCon, sourceFrameRefCon, status, _, imageBuffer, presentationTimeStamp, duration in
+    var wireArrivalHostTime: CMTime?
+    if let sourceFrameRefCon {
+        let context = Unmanaged<H264FrameDecodeContext>.fromOpaque(sourceFrameRefCon).takeRetainedValue()
+        wireArrivalHostTime = context.wireArrivalHostTime
+    }
     guard let refCon else { return }
     let decoder = Unmanaged<H264Decoder>.fromOpaque(refCon).takeUnretainedValue()
     decoder.handleDecoded(
         status: status,
         imageBuffer: imageBuffer,
         presentationTimeStamp: presentationTimeStamp,
-        duration: duration
+        duration: duration,
+        wireArrivalHostTime: wireArrivalHostTime
     )
+}
+
+final class H264FrameDecodeContext {
+    let wireArrivalHostTime: CMTime?
+
+    init(wireArrivalHostTime: CMTime?) {
+        self.wireArrivalHostTime = wireArrivalHostTime
+    }
 }
