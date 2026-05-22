@@ -284,6 +284,7 @@ final class CaptureNSView: NSView {
         guard isMouseEnabled else { return }
         let point = convert(event.locationInWindow, from: nil)
         let effective = effectiveRect()
+        guard effective.contains(point) else { return }
         let normalized = MouseCoordinateMapper.normalizedPoint(clientPoint: point, effectiveRect: effective)
         let absolute = MouseCoordinateMapper.absolutePoint(clientPoint: point, effectiveRect: effective)
         emit(mouseReportBuilder.move(x: absolute.x, y: absolute.y))
