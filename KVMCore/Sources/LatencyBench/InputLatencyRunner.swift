@@ -199,7 +199,7 @@ final class InputLatencyRunner {
                     label: "baseline"
                 )
                 let finalURL = lastImageBuffer.flatMap { buffer in
-                    dumpFramebufferPNG(pixelBuffer: buffer, label: "post-keystroke")
+                    dumpFramebufferPNG(pixelBuffer: buffer, label: "sample0-post")
                 }
                 FileHandle.standardError.write(Data(
                     ("    [debug] watch region center=(\(centerX),\(centerY)) side=\(regionSide)\n").utf8
@@ -211,7 +211,15 @@ final class InputLatencyRunner {
                 }
                 if let finalURL {
                     FileHandle.standardError.write(Data(
-                        "    [debug] post-keystroke → \(finalURL.path)\n".utf8
+                        "    [debug] sample0-post → \(finalURL.path)\n".utf8
+                    ))
+                }
+            }
+            if configuration.debugKeys && sampleIndex == configuration.samples - 1 {
+                if let buffer = lastImageBuffer,
+                   let endURL = dumpFramebufferPNG(pixelBuffer: buffer, label: "final") {
+                    FileHandle.standardError.write(Data(
+                        "    [debug] final → \(endURL.path)\n".utf8
                     ))
                 }
             }
