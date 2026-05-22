@@ -162,6 +162,7 @@ public final class SampleBufferRenderCoordinator: @unchecked Sendable {
     private let renderMode: SampleBufferRenderMode
     private weak var display: SampleBufferDisplay?
     private var lastPresentationTime: CMTime?
+    private var sampleObserver: (@Sendable (CMSampleBuffer) -> Void)?
 
     public init(flushQueuedFrames: Bool = false) {
         self.renderMode = flushQueuedFrames ? .sampleBufferFlushingQueuedFrames : .sampleBuffer
@@ -198,15 +199,28 @@ public final class SampleBufferRenderCoordinator: @unchecked Sendable {
         let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
 
         lock.lock()
+        let observer = sampleObserver
         guard shouldAccept(presentationTime: presentationTime) else {
             lock.unlock()
+            observer?(sampleBuffer)
             return
         }
         lastPresentationTime = presentationTime
         let display = display
         lock.unlock()
 
+        observer?(sampleBuffer)
         display?.enqueue(sampleBuffer, renderMode: renderMode)
+    }
+
+    /// Installs an observer that fires for every sample buffer the coordinator
+    /// receives (including ones that would be filtered out as non-monotonic).
+    /// `LatencyBench` uses this to tap decoded frames without disturbing the
+    /// production render pipeline.
+    public func setSampleObserver(_ observer: (@Sendable (CMSampleBuffer) -> Void)?) {
+        lock.lock()
+        sampleObserver = observer
+        lock.unlock()
     }
 
     public func flush() {

@@ -9,12 +9,17 @@ let package = Package(
         .iOS("26.0")
     ],
     products: [
-        .library(name: "KVMCore", targets: ["KVMCore"])
+        .library(name: "KVMCore", targets: ["KVMCore"]),
+        .executable(name: "LatencyBench", targets: ["LatencyBench"])
     ],
     targets: [
         .target(
             name: "KVMCore",
             resources: [.process("Resources.xcassets")]
+        ),
+        .executableTarget(
+            name: "LatencyBench",
+            dependencies: ["KVMCore"]
         ),
         .testTarget(
             name: "KVMCoreTests",

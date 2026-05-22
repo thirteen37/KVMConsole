@@ -228,6 +228,7 @@ public actor RFBClient {
     }
 
     private func handleFramebufferUpdate() async throws {
+        let wireArrivalHostTime = CMClockGetTime(CMClockGetHostTimeClock())
         let header = try await readExact(byteCount: 3)
         var headerReader = RFBByteReader(header)
         try headerReader.skip(1)
@@ -275,7 +276,7 @@ public actor RFBClient {
         }
 
         if shouldEmitFrame {
-            let sampleBuffer = try framebuffer.makeSampleBuffer()
+            let sampleBuffer = try framebuffer.makeSampleBuffer(wireArrivalHostTime: wireArrivalHostTime)
             onSampleBuffer(sampleBuffer)
         }
     }

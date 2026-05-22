@@ -186,7 +186,7 @@ public final class RFBFramebuffer: @unchecked Sendable {
         }
     }
 
-    public func makeSampleBuffer() throws -> CMSampleBuffer {
+    public func makeSampleBuffer(wireArrivalHostTime: CMTime? = nil) throws -> CMSampleBuffer {
         guard let pixelBuffer, let formatDescription else {
             throw RFBError.malformedMessage("framebuffer is not initialized")
         }
@@ -208,6 +208,9 @@ public final class RFBFramebuffer: @unchecked Sendable {
             throw RFBError.malformedMessage("failed to create sample buffer")
         }
         markDisplayImmediately(sampleBuffer)
+        if let wireArrivalHostTime {
+            SampleBufferLatencyTag.attachWireArrivalHostTime(wireArrivalHostTime, to: sampleBuffer)
+        }
         return sampleBuffer
     }
 
