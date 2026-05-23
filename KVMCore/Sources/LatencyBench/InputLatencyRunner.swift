@@ -33,6 +33,7 @@ final class InputLatencyRunner {
         let hit: Bool
         let changedPixels: Int
         let framesObserved: Int
+        let inputDispatchMs: Double
         let inputToWireArrivalMs: Double?
         let wireToPresentedMs: Double?
         let inputToPresentedMs: Double?
@@ -129,6 +130,8 @@ final class InputLatencyRunner {
             case .keyboard:
                 await Self.sendKeyboardProbe(index: probeIndex, target: target)
             }
+            let inputDispatchedHostTime = CMClockGetTime(CMClockGetHostTimeClock())
+            let inputDispatchMs = CMTimeGetSeconds(CMTimeSubtract(inputDispatchedHostTime, inputHostTime)) * 1000.0
 
             let deadline = Date().addingTimeInterval(configuration.timeout)
             var framesObserved = 0
@@ -181,6 +184,7 @@ final class InputLatencyRunner {
                     hit: hitEvent != nil,
                     changedPixels: changedPixels,
                     framesObserved: framesObserved,
+                    inputDispatchMs: inputDispatchMs,
                     inputToWireArrivalMs: inputToWireArrivalMs,
                     wireToPresentedMs: wireToPresentedMs,
                     inputToPresentedMs: inputToPresentedMs

@@ -110,12 +110,14 @@ struct Report {
     }
 
     private func inputCSV() -> String {
-        var csv = "sampleIndex,inputMode,fromX,fromY,toX,toY,hit,changedPixels,framesObserved,inputToWireArrivalMs,wireToPresentedMs,inputToPresentedMs\n"
+        var csv = "sampleIndex,inputMode,fromX,fromY,toX,toY,hit,changedPixels,framesObserved,inputDispatchMs,inputToWireArrivalMs,wireToPresentedMs,inputToPresentedMs\n"
         for sample in inputSamples {
             csv += "\(sample.sampleIndex),"
             csv += "\(sample.inputMode),"
             csv += "\(sample.fromX),\(sample.fromY),\(sample.toX),\(sample.toY),"
             csv += "\(sample.hit),\(sample.changedPixels),\(sample.framesObserved),"
+            csv += String(format: "%.3f", sample.inputDispatchMs)
+            csv += ","
             csv += sample.inputToWireArrivalMs.map { String(format: "%.3f", $0) } ?? ""
             csv += ","
             csv += sample.wireToPresentedMs.map { String(format: "%.3f", $0) } ?? ""
@@ -174,6 +176,7 @@ struct InputSampleRow: Encodable {
     let hit: Bool
     let changedPixels: Int
     let framesObserved: Int
+    let inputDispatchMs: Double
     let inputToWireArrivalMs: Double?
     let wireToPresentedMs: Double?
     let inputToPresentedMs: Double?
@@ -188,6 +191,7 @@ struct InputSampleRow: Encodable {
         hit = sample.hit
         changedPixels = sample.changedPixels
         framesObserved = sample.framesObserved
+        inputDispatchMs = sample.inputDispatchMs
         inputToWireArrivalMs = sample.inputToWireArrivalMs
         wireToPresentedMs = sample.wireToPresentedMs
         inputToPresentedMs = sample.inputToPresentedMs
@@ -242,13 +246,15 @@ struct InputSummarySection: Encodable {
         let inputToWireArrival = samples.compactMap(\.inputToWireArrivalMs)
         let wireToPresented = samples.compactMap(\.wireToPresentedMs)
         let inputToPresented = samples.compactMap(\.inputToPresentedMs)
+        let inputDispatch = samples.map(\.inputDispatchMs)
         stages = [
+            SummarySection.Stage.make("inputDispatchMs", values: inputDispatch),
             SummarySection.Stage.make("inputToWireArrivalMs", values: inputToWireArrival),
             SummarySection.Stage.make("wireToPresentedMs", values: wireToPresented),
             SummarySection.Stage.make("inputToPresentedMs", values: inputToPresented)
         ]
 
-        let stage = stages[2]
+        let stage = stages[3]
         min = stage.min
         p50 = stage.p50
         p95 = stage.p95
