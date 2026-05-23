@@ -40,12 +40,13 @@ public final class SampleBufferDisplay {
     }
 
     private func enqueueSampleBuffer(_ sampleBuffer: CMSampleBuffer, flushQueuedFrames: Bool) {
-        if sampleLayer.status == .failed {
-            KVMLog.video.error("Sample buffer display layer failed: \(String(describing: self.sampleLayer.error), privacy: .public)")
-            sampleLayer.flush()
+        let renderer = sampleLayer.sampleBufferRenderer
+        if renderer.status == .failed {
+            KVMLog.video.error("Sample buffer display layer failed: \(String(describing: renderer.error), privacy: .public)")
+            renderer.flush()
         }
         if flushQueuedFrames {
-            sampleLayer.flush()
+            renderer.flush()
         }
         enqueuedCount += 1
         if enqueuedCount == 1 || enqueuedCount % 120 == 0 {
@@ -58,7 +59,7 @@ public final class SampleBufferDisplay {
             sampleLayer.frame = layer.bounds
             layer.contents = nil
             CATransaction.commit()
-            sampleLayer.enqueue(sampleBuffer)
+            sampleLayer.sampleBufferRenderer.enqueue(sampleBuffer)
         }
         if Thread.isMainThread {
             enqueue()
@@ -78,7 +79,7 @@ public final class SampleBufferDisplay {
         let display = { [layer, sampleLayer] in
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            sampleLayer.flush()
+            sampleLayer.sampleBufferRenderer.flush()
             sampleLayer.isHidden = true
             sampleLayer.frame = layer.bounds
             layer.contents = cgImage
@@ -139,7 +140,7 @@ public final class SampleBufferDisplay {
         let flush = { [layer, sampleLayer] in
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            sampleLayer.flushAndRemoveImage()
+            sampleLayer.sampleBufferRenderer.flush(removingDisplayedImage: true, completionHandler: nil)
             layer.contents = nil
             CATransaction.commit()
         }
