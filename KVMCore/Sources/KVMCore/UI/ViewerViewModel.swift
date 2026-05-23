@@ -1,6 +1,12 @@
 import Combine
 import Foundation
 
+public enum FullscreenKeyCaptureMode: Equatable, Sendable {
+    case allKeys
+    case limited
+    case off
+}
+
 @MainActor
 public final class ViewerViewModel: ObservableObject {
     @Published public var device: Device
@@ -14,6 +20,7 @@ public final class ViewerViewModel: ObservableObject {
     @Published public var passwordInput: String = ""
     @Published public var isFullscreen: Bool = false
     @Published public var showFullscreenBanner: Bool = false
+    @Published public var fullscreenKeyCaptureMode: FullscreenKeyCaptureMode = .off
     @Published public var hostStatus: KVMHostStatus?
 
     public var toggleFullscreen: (() -> Void)?
@@ -132,6 +139,10 @@ public final class ViewerViewModel: ObservableObject {
         bannerTask?.cancel()
         bannerTask = nil
         showFullscreenBanner = false
+    }
+
+    public func setFullscreenKeyCaptureMode(_ mode: FullscreenKeyCaptureMode) {
+        fullscreenKeyCaptureMode = mode
     }
 
     public func sendKeyboardReport(_ report: HIDKeyboardReport) {

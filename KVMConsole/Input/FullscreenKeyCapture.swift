@@ -1,4 +1,5 @@
-import AppKit
+@preconcurrency import ApplicationServices
+@preconcurrency import AppKit
 import Foundation
 import KVMCore
 
@@ -14,13 +15,17 @@ final class FullscreenKeyCaptureCoordinator {
     private let onTripleEscape: @MainActor () -> Void
     private let onTopEdgeHover: @MainActor () -> Void
     private let onTopEdgeLeft: @MainActor () -> Void
+    private let onCaptureModeChange: @MainActor (FullscreenKeyCaptureMode) -> Void
 
-    private let builder = HIDKeyboardReportBuilder()
+    private let keyTranslator = KeyEventTranslator()
     private var escapeDetector = TripleEscapeDetector()
     private weak var window: NSWindow?
-    private var monitor: Any?
+    private var localMonitor: Any?
+    private var eventTap: CFMachPort?
+    private var eventTapRunLoopSource: CFRunLoopSource?
     private var savedPresentationOptions: NSApplication.PresentationOptions?
     private var savedAcceptsMouseMovedEvents: Bool?
+    private var captureMode: FullscreenKeyCaptureMode = .off
 
     init(
         isCapturing: @escaping @MainActor () -> Bool,
@@ -28,7 +33,8 @@ final class FullscreenKeyCaptureCoordinator {
         onKeyboardReport: @escaping @MainActor (HIDKeyboardReport) -> Void,
         onTripleEscape: @escaping @MainActor () -> Void,
         onTopEdgeHover: @escaping @MainActor () -> Void,
-        onTopEdgeLeft: @escaping @MainActor () -> Void
+        onTopEdgeLeft: @escaping @MainActor () -> Void,
+        onCaptureModeChange: @escaping @MainActor (FullscreenKeyCaptureMode) -> Void
     ) {
         self.isCapturing = isCapturing
         self.allowsKeyRepeat = allowsKeyRepeat
@@ -36,31 +42,43 @@ final class FullscreenKeyCaptureCoordinator {
         self.onTripleEscape = onTripleEscape
         self.onTopEdgeHover = onTopEdgeHover
         self.onTopEdgeLeft = onTopEdgeLeft
+        self.onCaptureModeChange = onCaptureModeChange
     }
 
     func start(window: NSWindow) {
-        guard monitor == nil else { return }
+        guard localMonitor == nil, eventTap == nil else { return }
         self.window = window
 
         savedPresentationOptions = NSApp.presentationOptions
-        NSApp.presentationOptions = [.autoHideMenuBar, .autoHideDock, .disableProcessSwitching]
+        NSApp.presentationOptions = [
+            .autoHideMenuBar,
+            .autoHideDock,
+            .disableProcessSwitching,
+            .disableHideApplication,
+            .disableForceQuit
+        ]
 
         savedAcceptsMouseMovedEvents = window.acceptsMouseMovedEvents
         window.acceptsMouseMovedEvents = true
 
-        monitor = NSEvent.addLocalMonitorForEvents(
-            matching: [.keyDown, .keyUp, .flagsChanged, .mouseMoved]
+        let hasAllKeys = requestAccessibilityTrustIfNeeded() && installEventTap()
+        captureMode = hasAllKeys ? .allKeys : .limited
+        onCaptureModeChange(captureMode)
+
+        localMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: hasAllKeys ? [.mouseMoved] : [.keyDown, .keyUp, .flagsChanged, .mouseMoved]
         ) { [weak self] event in
             guard let self else { return event }
-            return self.handleEvent(event)
+            return self.handleLocalEvent(event)
         }
     }
 
     func stop() {
-        if let monitor {
-            NSEvent.removeMonitor(monitor)
+        if let localMonitor {
+            NSEvent.removeMonitor(localMonitor)
         }
-        monitor = nil
+        localMonitor = nil
+        removeEventTap()
 
         if let savedPresentationOptions {
             NSApp.presentationOptions = savedPresentationOptions
@@ -73,11 +91,13 @@ final class FullscreenKeyCaptureCoordinator {
         savedAcceptsMouseMovedEvents = nil
         window = nil
         escapeDetector.reset()
+        captureMode = .off
+        onCaptureModeChange(.off)
 
-        onKeyboardReport(builder.reset())
+        onKeyboardReport(keyTranslator.reset())
     }
 
-    private func handleEvent(_ event: NSEvent) -> NSEvent? {
+    private func handleLocalEvent(_ event: NSEvent) -> NSEvent? {
         guard let window, NSApp.keyWindow === window else { return event }
 
         if event.type == .mouseMoved {
@@ -94,7 +114,7 @@ final class FullscreenKeyCaptureCoordinator {
             }
         }
 
-        if let report = report(for: event) {
+        if let report = keyTranslator.report(for: event, allowsKeyRepeat: allowsKeyRepeat) {
             onKeyboardReport(report)
         }
         return nil
@@ -110,21 +130,103 @@ final class FullscreenKeyCaptureCoordinator {
         }
     }
 
-    private func report(for event: NSEvent) -> HIDKeyboardReport? {
-        switch event.type {
-        case .keyDown:
-            guard !event.isARepeat || allowsKeyRepeat else { return nil }
-            guard let usage = HIDKeymap.usage(for: event.keyCode) else { return nil }
-            return builder.keyDown(usage: usage)
-        case .keyUp:
-            guard let usage = HIDKeymap.usage(for: event.keyCode) else { return nil }
-            return builder.keyUp(usage: usage)
-        case .flagsChanged:
-            guard let bit = HIDKeymap.modifierBit(for: event.keyCode) else { return nil }
-            let isPressed = HIDKeymap.isModifierPressed(keyCode: event.keyCode, in: event.modifierFlags)
-            return builder.modifierChanged(bit: bit, isPressed: isPressed)
-        default:
-            return nil
+    private func requestAccessibilityTrustIfNeeded() -> Bool {
+        guard !AXIsProcessTrusted() else { return true }
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        return AXIsProcessTrustedWithOptions(options)
+    }
+
+    private func installEventTap() -> Bool {
+        let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
+            | CGEventMask(1 << CGEventType.keyUp.rawValue)
+            | CGEventMask(1 << CGEventType.flagsChanged.rawValue)
+
+        let userInfo = Unmanaged.passUnretained(self).toOpaque()
+        guard let eventTap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: mask,
+            callback: eventTapCallback,
+            userInfo: userInfo
+        ) else {
+            return false
         }
+
+        guard let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0) else {
+            CFMachPortInvalidate(eventTap)
+            return false
+        }
+
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: eventTap, enable: true)
+        self.eventTap = eventTap
+        eventTapRunLoopSource = source
+        return true
+    }
+
+    private func removeEventTap() {
+        if let eventTapRunLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), eventTapRunLoopSource, .commonModes)
+        }
+        eventTapRunLoopSource = nil
+
+        if let eventTap {
+            CFMachPortInvalidate(eventTap)
+        }
+        eventTap = nil
+    }
+
+    fileprivate func handleCGEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let eventTap {
+                CGEvent.tapEnable(tap: eventTap, enable: true)
+            }
+            return Unmanaged.passUnretained(event)
+        }
+
+        guard let window, NSApp.keyWindow === window else {
+            return Unmanaged.passUnretained(event)
+        }
+
+        guard isCapturing() else {
+            return Unmanaged.passUnretained(event)
+        }
+
+        let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
+        let isAutorepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
+
+        if type == .keyDown, !isAutorepeat, keyCode == Self.escapeKeyCode {
+            if escapeDetector.register(at: Date()) {
+                escapeDetector.reset()
+                onTripleEscape()
+            }
+        }
+
+        if let report = keyTranslator.report(
+            for: type,
+            keyCode: keyCode,
+            flags: event.flags,
+            isAutorepeat: isAutorepeat,
+            allowsKeyRepeat: allowsKeyRepeat
+        ) {
+            onKeyboardReport(report)
+        }
+
+        return nil
+    }
+}
+
+private let eventTapCallback: CGEventTapCallBack = { _, type, event, userInfo in
+    guard let userInfo else {
+        return Unmanaged.passUnretained(event)
+    }
+
+    let coordinator = Unmanaged<FullscreenKeyCaptureCoordinator>
+        .fromOpaque(userInfo)
+        .takeUnretainedValue()
+
+    return MainActor.assumeIsolated {
+        coordinator.handleCGEvent(type: type, event: event)
     }
 }
