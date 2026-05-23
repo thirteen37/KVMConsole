@@ -59,6 +59,12 @@ struct ViewerView: View {
                     .frame(maxHeight: .infinity, alignment: .top)
             }
 
+            if model.isFullscreen {
+                captureStatusBadge
+                    .transition(.opacity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            }
+
             if model.passwordPrompt != nil {
                 passwordPromptOverlay
             }
@@ -68,6 +74,8 @@ struct ViewerView: View {
         })
         .toolbar { toolbarContent }
         .animation(.easeInOut(duration: 0.25), value: model.showFullscreenBanner)
+        .animation(.easeInOut(duration: 0.25), value: model.fullscreenKeyCaptureMode)
+        .animation(.easeInOut(duration: 0.25), value: model.isKeyboardCaptureEnabled)
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification)) { note in
             guard let w = note.object as? NSWindow, w === window else { return }
             handleEnterFullScreen()
@@ -216,12 +224,95 @@ struct ViewerView: View {
     }
 
     private var fullscreenBanner: some View {
-        Text("Capturing keys — triple-Esc to release")
+        Text(fullscreenBannerText)
             .font(.callout)
             .padding(.horizontal, 14)
             .padding(.vertical, 6)
             .background(.regularMaterial, in: Capsule())
             .padding(.top, 60)
+    }
+
+    private var captureStatusBadge: some View {
+        Button {
+            if effectiveFullscreenKeyCaptureMode == .limited {
+                openAccessibilitySettings()
+            }
+        } label: {
+            Label(captureStatusLabel, systemImage: captureStatusSymbol)
+                .font(.caption.weight(.semibold))
+                .labelStyle(.titleAndIcon)
+                .foregroundStyle(captureStatusForeground)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.regularMaterial, in: Capsule())
+                .overlay {
+                    Capsule()
+                        .stroke(captureStatusBorder, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .disabled(effectiveFullscreenKeyCaptureMode != .limited)
+        .help(captureStatusHelp)
+        .padding(.top, 64)
+        .padding(.trailing, 16)
+    }
+
+    private var fullscreenBannerText: String {
+        switch effectiveFullscreenKeyCaptureMode {
+        case .allKeys:
+            return "Capturing all keys - triple-Esc to release"
+        case .limited:
+            return "Limited capture - Cmd+Space and system shortcuts won't reach the remote. Enable Accessibility in System Settings."
+        case .off:
+            return "Keyboard capture off"
+        }
+    }
+
+    private var effectiveFullscreenKeyCaptureMode: FullscreenKeyCaptureMode {
+        model.isKeyboardCaptureEnabled ? model.fullscreenKeyCaptureMode : .off
+    }
+
+    private var captureStatusLabel: String {
+        switch effectiveFullscreenKeyCaptureMode {
+        case .allKeys: return "All keys"
+        case .limited: return "Limited keys"
+        case .off: return "Capture off"
+        }
+    }
+
+    private var captureStatusSymbol: String {
+        switch effectiveFullscreenKeyCaptureMode {
+        case .allKeys: return "keyboard.badge.ellipsis"
+        case .limited: return "exclamationmark.triangle.fill"
+        case .off: return "keyboard.badge.eye"
+        }
+    }
+
+    private var captureStatusForeground: Color {
+        switch effectiveFullscreenKeyCaptureMode {
+        case .allKeys: return .green
+        case .limited: return .orange
+        case .off: return .secondary
+        }
+    }
+
+    private var captureStatusBorder: Color {
+        switch effectiveFullscreenKeyCaptureMode {
+        case .allKeys: return .green.opacity(0.55)
+        case .limited: return .orange.opacity(0.7)
+        case .off: return .secondary.opacity(0.45)
+        }
+    }
+
+    private var captureStatusHelp: String {
+        switch effectiveFullscreenKeyCaptureMode {
+        case .allKeys:
+            return "All fullscreen keys are forwarded to the host"
+        case .limited:
+            return "Open Accessibility settings to allow all-key capture"
+        case .off:
+            return "Keyboard forwarding is off"
+        }
     }
 
     private var passwordPromptOverlay: some View {
@@ -291,7 +382,8 @@ struct ViewerView: View {
             onKeyboardReport: { [model] report in model.sendKeyboardReport(report) },
             onTripleEscape: { [model] in model.handleTripleEscape() },
             onTopEdgeHover: { revealToolbar() },
-            onTopEdgeLeft: { scheduleToolbarHide() }
+            onTopEdgeLeft: { scheduleToolbarHide() },
+            onCaptureModeChange: { [model] mode in model.setFullscreenKeyCaptureMode(mode) }
         )
         coord.start(window: window)
         coordinator = coord
@@ -332,5 +424,12 @@ struct ViewerView: View {
         toolbarHideTask = nil
         model.clearFullscreenBanner()
         model.disconnect()
+    }
+
+    private func openAccessibilitySettings() {
+        guard let url = URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        ) else { return }
+        NSWorkspace.shared.open(url)
     }
 }
