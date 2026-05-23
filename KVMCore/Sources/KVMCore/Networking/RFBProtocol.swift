@@ -130,10 +130,27 @@ public enum RFBSecurityPreference: Equatable, Sendable {
 public struct RFBSessionProfile: Equatable, Sendable {
     public let securityPreference: RFBSecurityPreference
     public let inputEchoUpdatePolicy: RFBInputEchoUpdatePolicy
+    public let usesContinuousUpdates: Bool
+    public let framebufferPollInterval: TimeInterval?
 
+    /// Apple Screen Sharing's server only emits framebuffer updates in
+    /// response to a client `FramebufferUpdateRequest`, and (verified
+    /// empirically against the live server) ignores or refuses the
+    /// standard `EnableContinuousUpdates` extension — sending message
+    /// 150 stops the server from delivering further updates on that
+    /// connection. We also verified that pumping background FBURs at
+    /// 30 Hz did **not** lower `inputToWireArrival` (`min` shifted from
+    /// 45 ms→40 ms but `p50` stayed at ~400 ms), and it overloaded the
+    /// decoder (`wireToPresented` p99 went from 25 ms → 277 ms). The
+    /// floor here is the server's internal capture cadence, which
+    /// appears to live in some Apple-only encoding/auth combination we
+    /// don't speak. Stick with on-receive incremental FBURs plus the
+    /// per-keystroke echo nudge.
     public static let appleScreenSharing = RFBSessionProfile(
         securityPreference: .appleScreenSharing,
-        inputEchoUpdatePolicy: .keyboard(minimumInterval: 0.05, trigger: .keyUp)
+        inputEchoUpdatePolicy: .keyboard(minimumInterval: 0.025, trigger: .any),
+        usesContinuousUpdates: false,
+        framebufferPollInterval: nil
     )
 
     public static let vnc = RFBSessionProfile(
@@ -142,10 +159,14 @@ public struct RFBSessionProfile: Equatable, Sendable {
 
     public init(
         securityPreference: RFBSecurityPreference,
-        inputEchoUpdatePolicy: RFBInputEchoUpdatePolicy = .disabled
+        inputEchoUpdatePolicy: RFBInputEchoUpdatePolicy = .disabled,
+        usesContinuousUpdates: Bool = false,
+        framebufferPollInterval: TimeInterval? = nil
     ) {
         self.securityPreference = securityPreference
         self.inputEchoUpdatePolicy = inputEchoUpdatePolicy
+        self.usesContinuousUpdates = usesContinuousUpdates
+        self.framebufferPollInterval = framebufferPollInterval
     }
 }
 
@@ -157,6 +178,7 @@ public enum RFBInputEchoUpdatePolicy: Equatable, Sendable {
 public enum RFBInputEchoUpdateTrigger: Equatable, Sendable {
     case keyDown
     case keyUp
+    case any
 }
 
 public struct RFBPixelFormat: Equatable, Sendable {
@@ -246,6 +268,7 @@ public enum RFBEncoding: Int32, Sendable {
     case desktopSize = -223
     case lastRect = -224
     case fence = -312
+    case continuousUpdates = -313
 }
 
 public enum RFBClientMessage {
@@ -310,6 +333,28 @@ public enum RFBClientMessage {
         writer.writeUInt32(flags & ~fenceRequestFlag)
         writer.writeUInt8(UInt8(payload.count))
         writer.writeData(payload)
+        return writer.data
+    }
+
+    /// `EnableContinuousUpdates` from the RFB Community Protocol Extensions.
+    /// When `enable` is true, the server pushes `FramebufferUpdate` messages
+    /// for the requested rectangle without waiting for a corresponding
+    /// `FramebufferUpdateRequest`, removing one network round-trip from
+    /// every server-to-client update on Apple Screen Sharing.
+    public static func enableContinuousUpdates(
+        enable: Bool,
+        x: UInt16,
+        y: UInt16,
+        width: UInt16,
+        height: UInt16
+    ) -> Data {
+        var writer = RFBByteWriter()
+        writer.writeUInt8(150)
+        writer.writeUInt8(enable ? 1 : 0)
+        writer.writeUInt16(x)
+        writer.writeUInt16(y)
+        writer.writeUInt16(width)
+        writer.writeUInt16(height)
         return writer.data
     }
 }
