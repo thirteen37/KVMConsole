@@ -49,6 +49,44 @@ final class RFBProtocolTests: XCTestCase {
         XCTAssertEqual(Array(data), [3, 1, 0, 1, 0, 2, 2, 128, 1, 224])
     }
 
+    func test_sessionProfilesConfigureAppleOnlyKeyboardEchoUpdates() {
+        switch RFBSessionProfile.appleScreenSharing.inputEchoUpdatePolicy {
+        case .keyboard(let minimumInterval, let trigger):
+            XCTAssertEqual(minimumInterval, 0.05, accuracy: 0.001)
+            XCTAssertEqual(trigger, .keyUp)
+        case .disabled:
+            XCTFail("Apple Screen Sharing should request keyboard echo updates")
+        }
+
+        XCTAssertEqual(RFBSessionProfile.vnc.inputEchoUpdatePolicy, .disabled)
+    }
+
+    func test_inputEchoUpdateRequesterRequiresKeyboardPolicyTriggerAndFramebufferSize() {
+        let disabled = RFBInputEchoUpdateRequester(policy: .disabled)
+        disabled.updateFramebufferSize(width: 1920, height: 1080)
+        XCTAssertNil(disabled.updateRequestAfterKeyboardEvent(isKeyDown: true, nowUptimeNanoseconds: 1))
+
+        let requester = RFBInputEchoUpdateRequester(policy: .keyboard(minimumInterval: 0.05, trigger: .keyUp))
+        XCTAssertNil(requester.updateRequestAfterKeyboardEvent(isKeyDown: false, nowUptimeNanoseconds: 1))
+
+        requester.updateFramebufferSize(width: 1920, height: 1080)
+        XCTAssertNil(requester.updateRequestAfterKeyboardEvent(isKeyDown: true, nowUptimeNanoseconds: 1))
+        let request = requester.updateRequestAfterKeyboardEvent(isKeyDown: false, nowUptimeNanoseconds: 1)!
+        XCTAssertEqual(Array(request.data), [3, 1, 0, 0, 0, 0, 7, 128, 4, 56])
+    }
+
+    func test_inputEchoUpdateRequesterThrottlesRepeatedKeyboardReports() {
+        let requester = RFBInputEchoUpdateRequester(policy: .keyboard(minimumInterval: 0.05, trigger: .keyUp))
+        requester.updateFramebufferSize(width: 640, height: 480)
+
+        XCTAssertNotNil(requester.updateRequestAfterKeyboardEvent(isKeyDown: false, nowUptimeNanoseconds: 1_000_000_000))
+        XCTAssertNil(requester.updateRequestAfterKeyboardEvent(isKeyDown: false, nowUptimeNanoseconds: 1_049_999_999))
+        XCTAssertEqual(
+            Array(requester.updateRequestAfterKeyboardEvent(isKeyDown: false, nowUptimeNanoseconds: 1_050_000_000)!.data),
+            [3, 1, 0, 0, 0, 0, 2, 128, 1, 224]
+        )
+    }
+
     func test_endpointPortFallsBackToRFBForOutOfRangeValues() {
         XCTAssertEqual(RFBClient.endpointPort(from: 5901), NWEndpoint.Port(rawValue: 5901)!)
         XCTAssertEqual(RFBClient.endpointPort(from: 99_999), NWEndpoint.Port(rawValue: 5900)!)

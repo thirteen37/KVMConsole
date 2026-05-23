@@ -129,14 +129,34 @@ public enum RFBSecurityPreference: Equatable, Sendable {
 
 public struct RFBSessionProfile: Equatable, Sendable {
     public let securityPreference: RFBSecurityPreference
+    public let inputEchoUpdatePolicy: RFBInputEchoUpdatePolicy
 
     public static let appleScreenSharing = RFBSessionProfile(
-        securityPreference: .appleScreenSharing
+        securityPreference: .appleScreenSharing,
+        inputEchoUpdatePolicy: .keyboard(minimumInterval: 0.05, trigger: .keyUp)
     )
 
     public static let vnc = RFBSessionProfile(
         securityPreference: .vnc
     )
+
+    public init(
+        securityPreference: RFBSecurityPreference,
+        inputEchoUpdatePolicy: RFBInputEchoUpdatePolicy = .disabled
+    ) {
+        self.securityPreference = securityPreference
+        self.inputEchoUpdatePolicy = inputEchoUpdatePolicy
+    }
+}
+
+public enum RFBInputEchoUpdatePolicy: Equatable, Sendable {
+    case disabled
+    case keyboard(minimumInterval: TimeInterval, trigger: RFBInputEchoUpdateTrigger)
+}
+
+public enum RFBInputEchoUpdateTrigger: Equatable, Sendable {
+    case keyDown
+    case keyUp
 }
 
 public struct RFBPixelFormat: Equatable, Sendable {

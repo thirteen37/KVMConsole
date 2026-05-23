@@ -16,7 +16,7 @@ public actor RFBClient {
     private let queue = DispatchQueue(label: "com.kvmconsole.rfb.connection")
     private let framebuffer = RFBFramebuffer()
     private let writer = RFBConnectionWriter()
-    private let inputSender = RFBInputSender()
+    private let inputSender: RFBInputSender
 
     private var connection: NWConnection?
     private var zrleDecoder: RFBZRLEDecoder?
@@ -34,6 +34,7 @@ public actor RFBClient {
         self.onSampleBuffer = onSampleBuffer
         self.onVideoSize = onVideoSize
         self.onAuthenticated = onAuthenticated
+        self.inputSender = RFBInputSender(inputEchoUpdatePolicy: profile.inputEchoUpdatePolicy)
     }
 
     public func connectAndRun(password: String) async throws {
@@ -62,8 +63,11 @@ public actor RFBClient {
         connection = nil
     }
 
-    public nonisolated func sendKeyboardReport(_ report: HIDKeyboardReport) {
-        inputSender.sendKeyboardReport(report, writer: writer)
+    public nonisolated func sendKeyboardReport(
+        _ report: HIDKeyboardReport,
+        onDrained: (@Sendable () -> Void)? = nil
+    ) {
+        inputSender.sendKeyboardReport(report, writer: writer, onDrained: onDrained)
     }
 
     public nonisolated func sendMouseReport(_ report: HIDMouseAbsoluteReport) async {
@@ -454,16 +458,22 @@ private final class RFBConnectionWriter: @unchecked Sendable {
 
 private final class RFBInputSender: @unchecked Sendable {
     private let lock = NSLock()
+    private let inputEchoUpdateRequester: RFBInputEchoUpdateRequester
     private var previousKeyboardReport = HIDKeyboardReport()
-    private var pendingKeyboardReports: [HIDKeyboardReport] = []
+    private var pendingKeyboardReports: [PendingKeyboardReport] = []
     private var keyboardDrainTask: Task<Void, Never>?
     private var keyboardDrainGeneration = 0
     private var framebufferWidth = 0
     private var framebufferHeight = 0
 
+    init(inputEchoUpdatePolicy: RFBInputEchoUpdatePolicy) {
+        self.inputEchoUpdateRequester = RFBInputEchoUpdateRequester(policy: inputEchoUpdatePolicy)
+    }
+
     func cancel() {
         lock.lock()
         let keyboardDrainTask = keyboardDrainTask
+        let droppedKeyboardReports = pendingKeyboardReports
         keyboardDrainGeneration &+= 1
         self.keyboardDrainTask = nil
         pendingKeyboardReports.removeAll()
@@ -471,6 +481,7 @@ private final class RFBInputSender: @unchecked Sendable {
         lock.unlock()
 
         keyboardDrainTask?.cancel()
+        notifyDrained(droppedKeyboardReports)
     }
 
     func updateFramebufferSize(width: Int, height: Int) {
@@ -478,11 +489,16 @@ private final class RFBInputSender: @unchecked Sendable {
         framebufferWidth = width
         framebufferHeight = height
         lock.unlock()
+        inputEchoUpdateRequester.updateFramebufferSize(width: width, height: height)
     }
 
-    func sendKeyboardReport(_ report: HIDKeyboardReport, writer: RFBConnectionWriter) {
+    func sendKeyboardReport(
+        _ report: HIDKeyboardReport,
+        writer: RFBConnectionWriter,
+        onDrained: (@Sendable () -> Void)? = nil
+    ) {
         lock.lock()
-        pendingKeyboardReports.append(report)
+        pendingKeyboardReports.append(.init(report: report, onDrained: onDrained))
         if keyboardDrainTask == nil {
             keyboardDrainGeneration &+= 1
             let generation = keyboardDrainGeneration
@@ -498,17 +514,31 @@ private final class RFBInputSender: @unchecked Sendable {
             finishKeyboardDrain(generation: generation, clearPendingReports: false)
         }
         while !Task.isCancelled {
-            guard let transitions = nextKeyboardTransitions(generation: generation) else { return }
-            for transition in transitions {
+            guard let pending = nextKeyboardTransitions(generation: generation) else { return }
+            defer {
+                pending.onDrained?()
+            }
+            for transition in pending.transitions {
                 guard !Task.isCancelled else { return }
                 do {
                     try await writer.send(RFBClientMessage.keyEvent(down: transition.isDown, keysym: transition.keysym))
+                    if let echoRequest = inputEchoUpdateRequester.updateRequestAfterKeyboardEvent(isKeyDown: transition.isDown) {
+                        await Self.sendInputEchoUpdate(echoRequest.data, writer: writer)
+                    }
                 } catch {
                     KVMLog.rfb.error("RFB keyboard event send failed: \(error.localizedDescription, privacy: .public)")
                     finishKeyboardDrain(generation: generation, clearPendingReports: true)
                     return
                 }
             }
+        }
+    }
+
+    private static func sendInputEchoUpdate(_ data: Data, writer: RFBConnectionWriter) async {
+        do {
+            try await writer.send(data)
+        } catch {
+            KVMLog.rfb.error("RFB input echo update request failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -536,7 +566,7 @@ private final class RFBInputSender: @unchecked Sendable {
         }
     }
 
-    private func nextKeyboardTransitions(generation: Int) -> [HIDUsageToX11Keysym.KeyTransition]? {
+    private func nextKeyboardTransitions(generation: Int) -> PendingKeyboardTransitions? {
         lock.lock()
         defer { lock.unlock() }
         guard generation == keyboardDrainGeneration else { return nil }
@@ -545,7 +575,8 @@ private final class RFBInputSender: @unchecked Sendable {
             return nil
         }
 
-        let report = pendingKeyboardReports.removeFirst()
+        let pending = pendingKeyboardReports.removeFirst()
+        let report = pending.report
         let transitions: [HIDUsageToX11Keysym.KeyTransition]
         if report == previousKeyboardReport {
             transitions = HIDUsageToX11Keysym.repeatTransitions(for: report)
@@ -553,23 +584,118 @@ private final class RFBInputSender: @unchecked Sendable {
             transitions = HIDUsageToX11Keysym.transitions(from: previousKeyboardReport, to: report)
         }
         previousKeyboardReport = report
-        return transitions
+        return .init(transitions: transitions, onDrained: pending.onDrained)
     }
 
     private func finishKeyboardDrain(generation: Int, clearPendingReports: Bool) {
         lock.lock()
-        defer { lock.unlock() }
-        guard generation == keyboardDrainGeneration else { return }
+        guard generation == keyboardDrainGeneration else {
+            lock.unlock()
+            return
+        }
+        let droppedKeyboardReports: [PendingKeyboardReport]
         if clearPendingReports {
+            droppedKeyboardReports = pendingKeyboardReports
             pendingKeyboardReports.removeAll()
+        } else {
+            droppedKeyboardReports = []
         }
         keyboardDrainTask = nil
+        lock.unlock()
+
+        notifyDrained(droppedKeyboardReports)
     }
 
     private func framebufferSize() -> (width: Int, height: Int) {
         lock.lock()
         defer { lock.unlock() }
         return (framebufferWidth, framebufferHeight)
+    }
+
+    private struct PendingKeyboardReport {
+        let report: HIDKeyboardReport
+        let onDrained: (@Sendable () -> Void)?
+    }
+
+    private struct PendingKeyboardTransitions {
+        let transitions: [HIDUsageToX11Keysym.KeyTransition]
+        let onDrained: (@Sendable () -> Void)?
+    }
+
+    private func notifyDrained(_ reports: [PendingKeyboardReport]) {
+        for report in reports {
+            report.onDrained?()
+        }
+    }
+}
+
+final class RFBInputEchoUpdateRequester: @unchecked Sendable {
+    struct Request: Equatable {
+        let data: Data
+    }
+
+    private let lock = NSLock()
+    private let policy: RFBInputEchoUpdatePolicy
+    private var framebufferWidth = 0
+    private var framebufferHeight = 0
+    private var lastRequestUptimeNanoseconds: UInt64?
+
+    init(policy: RFBInputEchoUpdatePolicy) {
+        self.policy = policy
+    }
+
+    func updateFramebufferSize(width: Int, height: Int) {
+        lock.lock()
+        framebufferWidth = width
+        framebufferHeight = height
+        lock.unlock()
+    }
+
+    func updateRequestAfterKeyboardEvent(
+        isKeyDown: Bool,
+        nowUptimeNanoseconds: UInt64 = DispatchTime.now().uptimeNanoseconds
+    ) -> Request? {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard case .keyboard(let minimumInterval, let trigger) = policy else { return nil }
+        guard trigger.matches(isKeyDown: isKeyDown) else { return nil }
+        guard framebufferWidth > 0, framebufferHeight > 0 else { return nil }
+
+        let throttleNanoseconds = Self.nanoseconds(for: minimumInterval)
+        if let lastRequestUptimeNanoseconds,
+           nowUptimeNanoseconds >= lastRequestUptimeNanoseconds,
+           nowUptimeNanoseconds - lastRequestUptimeNanoseconds < throttleNanoseconds {
+            return nil
+        }
+
+        lastRequestUptimeNanoseconds = nowUptimeNanoseconds
+        return Request(
+            data: RFBClientMessage.framebufferUpdateRequest(
+                incremental: true,
+                x: 0,
+                y: 0,
+                width: UInt16(max(0, min(Int(UInt16.max), framebufferWidth))),
+                height: UInt16(max(0, min(Int(UInt16.max), framebufferHeight)))
+            )
+        )
+    }
+
+    private static func nanoseconds(for interval: TimeInterval) -> UInt64 {
+        let nanoseconds = max(0, interval) * 1_000_000_000
+        guard nanoseconds < Double(UInt64.max) else { return UInt64.max }
+        return UInt64(nanoseconds.rounded(.up))
+    }
+}
+
+private extension RFBInputEchoUpdateTrigger {
+    func matches(isKeyDown: Bool) -> Bool {
+        switch self {
+        case .keyDown:
+            return isKeyDown
+        case .keyUp:
+            return !isKeyDown
+        }
     }
 }
 

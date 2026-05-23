@@ -101,7 +101,11 @@ final class RFBLatencyTarget: LatencyTarget {
 
     func sendKeyboardReport(_ report: HIDKeyboardReport) async {
         guard let client else { return }
-        client.sendKeyboardReport(report)
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            client.sendKeyboardReport(report) {
+                continuation.resume()
+            }
+        }
     }
 }
 
