@@ -266,16 +266,20 @@ final class CaptureNSView: NSView {
         return super.resignFirstResponder()
     }
 
+    // NSView responder methods always fire on the main thread; assuming the
+    // MainActor isolation here keeps the call site synchronous and avoids
+    // the run-loop hop that `Task { @MainActor in ... }` would impose on
+    // every keystroke and mouse event.
     private func emit(_ report: HIDKeyboardReport) {
         guard let onKeyboardReport else { return }
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             onKeyboardReport(report)
         }
     }
 
     private func emit(_ report: HIDMouseAbsoluteReport) {
         guard isMouseEnabled, let onMouseReport else { return }
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             onMouseReport(report)
         }
     }

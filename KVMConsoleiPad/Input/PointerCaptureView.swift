@@ -228,9 +228,13 @@ final class PointerCaptureUIView: UIView, UIGestureRecognizerDelegate {
         emit(mouseReportBuilder.reset())
     }
 
+    // UIGestureRecognizer callbacks run on the main thread; assuming
+    // MainActor isolation here keeps the call site synchronous and avoids
+    // the run-loop hop that `Task { @MainActor in ... }` would impose on
+    // every pointer event.
     private func emit(_ report: HIDMouseAbsoluteReport) {
         guard let onMouseReport else { return }
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             onMouseReport(report)
         }
     }

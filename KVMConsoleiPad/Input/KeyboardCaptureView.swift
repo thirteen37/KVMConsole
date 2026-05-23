@@ -155,16 +155,20 @@ final class KeyboardCaptureUIView: UIView, UIKeyInput {
         )
     }
 
+    // UIView press handling runs on the main thread; assuming MainActor
+    // isolation here keeps the call site synchronous and avoids the
+    // run-loop hop that `Task { @MainActor in ... }` would impose on every
+    // keystroke.
     private func emit(_ report: HIDKeyboardReport) {
         guard let onKeyboardReport else { return }
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             onKeyboardReport(report)
         }
     }
 
     private func consumeMomentary() {
         guard let onMomentaryModifiersConsumed else { return }
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             onMomentaryModifiersConsumed()
         }
     }
