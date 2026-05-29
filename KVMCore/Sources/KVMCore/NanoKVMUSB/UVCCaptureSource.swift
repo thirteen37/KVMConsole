@@ -5,6 +5,7 @@
 import Foundation
 
 public enum UVCCaptureError: Error, LocalizedError {
+    case cameraAccessDenied
     case deviceNotFound(uniqueID: String)
     case cannotAddInput
     case cannotAddOutput
@@ -12,6 +13,8 @@ public enum UVCCaptureError: Error, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
+        case .cameraAccessDenied:
+            return "Camera access is denied. Grant KVM Console camera access in System Settings → Privacy & Security → Camera, then reconnect."
         case .deviceNotFound(let id):
             return "Could not find USB video capture device (uniqueID=\(id)). It may have been unplugged."
         case .cannotAddInput:
@@ -47,6 +50,23 @@ public final class UVCCaptureSource: NSObject {
     public var onRuntimeError: ErrorHandler?
 
     public private(set) var videoSize: CGSize?
+
+    /// Ensures the app has camera access before capture begins. Returns `true` if
+    /// authorized (prompting the user on first run when status is `.notDetermined`),
+    /// `false` if denied or restricted — in which case `startRunning()` would silently
+    /// produce no frames and post no runtime error.
+    public static func ensureAuthorized() async -> Bool {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            return true
+        case .notDetermined:
+            return await AVCaptureDevice.requestAccess(for: .video)
+        case .denied, .restricted:
+            return false
+        @unknown default:
+            return false
+        }
+    }
 
     public init(renderCoordinator: SampleBufferRenderCoordinator) {
         self.renderCoordinator = renderCoordinator

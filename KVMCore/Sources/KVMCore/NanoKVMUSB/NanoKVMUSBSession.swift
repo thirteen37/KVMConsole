@@ -77,13 +77,6 @@ public final class NanoKVMUSBSession: KVMSession {
             self.finishWithError(error)
         }
 
-        do {
-            try capture.start(deviceUniqueID: videoID)
-        } catch {
-            finishWithError(error)
-            return
-        }
-
         let transport = CH9329SerialTransport(devicePath: serialPath)
         captureSource = capture
         serialTransport = transport
@@ -100,6 +93,29 @@ public final class NanoKVMUSBSession: KVMSession {
         }
 
         Task { [weak self] in
+            // Camera authorization must be confirmed before startRunning(): a denied or
+            // restricted camera yields no frames and posts no runtime error, which would
+            // otherwise leave the viewer black yet marked .streaming once the serial opens.
+            guard await UVCCaptureSource.ensureAuthorized() else {
+                await MainActor.run {
+                    guard let self, self.generation == myGeneration else { return }
+                    self.finishWithError(UVCCaptureError.cameraAccessDenied)
+                }
+                return
+            }
+
+            let started = await MainActor.run { () -> Bool in
+                guard let self, self.generation == myGeneration, self.state == .connecting else { return false }
+                do {
+                    try capture.start(deviceUniqueID: videoID)
+                    return true
+                } catch {
+                    self.finishWithError(error)
+                    return false
+                }
+            }
+            guard started else { return }
+
             do {
                 try await transport.open()
                 let weakSelfBox = WeakSession(value: self)
