@@ -24,7 +24,8 @@ I started this after using NanoKVM to drive my spare Mac in the closet for AI-ag
 
 ## Supported connection types
 
-- NanoKVM Lite / NanoKVM USB: native H.264 video and HID control
+- NanoKVM (Lite): IP-based NanoKVM with native H.264 video and HID control
+- NanoKVM USB (macOS only): Sipeed USB capture stick — UVC video plus CH9329 serial keyboard/mouse over USB
 - GL.iNet Comet: GLKVM/WebRTC video, keyboard/mouse input, clipboard, and ATX power controls
 - Apple Screen Sharing: macOS built-in Screen Sharing on port 5900 using a macOS account and password
 - VNC: standard RFB/VNC password authentication for compatible VNC servers

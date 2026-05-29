@@ -54,6 +54,18 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
             case .vnc: return .systemSymbol("network")
             }
         }
+
+        /// Device types that should appear in the device-editor type picker on the
+        /// current platform. `.nanoKVMUSB` is a USB-attached capture stick (UVC video +
+        /// CH9329 serial), so it is hidden on iPadOS, where there is no public USB-serial
+        /// API. `.nanoKVMLite` is an IP-based NanoKVM and remains available everywhere.
+        public static var userVisibleCases: [KVMType] {
+            #if os(macOS)
+            return allCases
+            #else
+            return allCases.filter { $0 != .nanoKVMUSB }
+            #endif
+        }
     }
 
     public let id: UUID
@@ -65,6 +77,8 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
     public var kvmType: KVMType
     public var allowsInsecureTLS: Bool
     public var lastConnectedAt: Date?
+    public var videoDeviceUniqueID: String?
+    public var serialDevicePath: String?
 
     public init(
         id: UUID = UUID(),
@@ -73,9 +87,11 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
         port: Int? = nil,
         scheme: Scheme = .http,
         username: String = "admin",
-        kvmType: KVMType = .nanoKVMUSB,
+        kvmType: KVMType = .nanoKVMLite,
         allowsInsecureTLS: Bool? = nil,
-        lastConnectedAt: Date? = nil
+        lastConnectedAt: Date? = nil,
+        videoDeviceUniqueID: String? = nil,
+        serialDevicePath: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -86,6 +102,8 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
         self.kvmType = kvmType
         self.allowsInsecureTLS = allowsInsecureTLS ?? (kvmType == .comet)
         self.lastConnectedAt = lastConnectedAt
+        self.videoDeviceUniqueID = videoDeviceUniqueID
+        self.serialDevicePath = serialDevicePath
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -98,6 +116,8 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
         case kvmType
         case allowsInsecureTLS
         case lastConnectedAt
+        case videoDeviceUniqueID
+        case serialDevicePath
     }
 
     public init(from decoder: Decoder) throws {
@@ -108,9 +128,11 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
         port = try container.decode(Int.self, forKey: .port)
         scheme = try container.decode(Scheme.self, forKey: .scheme)
         username = try container.decode(String.self, forKey: .username)
-        kvmType = try container.decodeIfPresent(KVMType.self, forKey: .kvmType) ?? .nanoKVMUSB
+        kvmType = try container.decodeIfPresent(KVMType.self, forKey: .kvmType) ?? .nanoKVMLite
         allowsInsecureTLS = try container.decodeIfPresent(Bool.self, forKey: .allowsInsecureTLS) ?? (kvmType == .comet)
         lastConnectedAt = try container.decodeIfPresent(Date.self, forKey: .lastConnectedAt)
+        videoDeviceUniqueID = try container.decodeIfPresent(String.self, forKey: .videoDeviceUniqueID)
+        serialDevicePath = try container.decodeIfPresent(String.self, forKey: .serialDevicePath)
     }
 
     public var baseURL: URL? {

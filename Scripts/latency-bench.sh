@@ -1,10 +1,9 @@
 #!/usr/bin/env zsh
 # Convenience wrapper around `swift run LatencyBench`.
 #
-# KVM Console is sandboxed, so its `devices.json` lives inside the app
-# container. To let the bench read it, grant the terminal running this
-# script Full Disk Access (System Settings → Privacy & Security → Full
-# Disk Access). Alternatively, pass `--store <path>` to point the bench
+# KVM Console stores its `devices.json` under
+# ~/Library/Application Support/io.lyx.KVMConsole/. The bench reads it from
+# there directly. Alternatively, pass `--store <path>` to point the bench
 # at an exported `devices.json`.
 #
 # Usage: ./Scripts/latency-bench.sh <subcommand> [options...]
