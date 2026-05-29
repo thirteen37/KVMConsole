@@ -1,3 +1,6 @@
+#if os(macOS)
+@preconcurrency import AVFoundation
+#endif
 import SwiftUI
 
 public struct DeviceEditorView: View {
@@ -19,6 +22,12 @@ public struct DeviceEditorView: View {
     @State private var password: String
     @State private var kvmType: Device.KVMType
     @State private var showPassword: Bool = false
+    @State private var videoDeviceUniqueID: String?
+    @State private var serialDevicePath: String?
+    #if os(macOS)
+    @State private var availableVideoDevices: [AVCaptureDevice] = []
+    @State private var availableSerialPorts: [USBSerialPort] = []
+    #endif
 
     init(
         mode: Mode,
@@ -39,7 +48,9 @@ public struct DeviceEditorView: View {
             _username = State(initialValue: "admin")
             _allowsInsecureTLS = State(initialValue: false)
             _password = State(initialValue: "")
-            _kvmType = State(initialValue: .nanoKVMUSB)
+            _kvmType = State(initialValue: .nanoKVMLite)
+            _videoDeviceUniqueID = State(initialValue: nil)
+            _serialDevicePath = State(initialValue: nil)
         case .edit(let device):
             _name = State(initialValue: device.name)
             _host = State(initialValue: device.host)
@@ -49,6 +60,8 @@ public struct DeviceEditorView: View {
             _allowsInsecureTLS = State(initialValue: device.allowsInsecureTLS)
             _password = State(initialValue: savedPassword ?? "")
             _kvmType = State(initialValue: device.kvmType)
+            _videoDeviceUniqueID = State(initialValue: device.videoDeviceUniqueID)
+            _serialDevicePath = State(initialValue: device.serialDevicePath)
         }
     }
 
@@ -60,7 +73,7 @@ public struct DeviceEditorView: View {
                 GridRow {
                     Text("Type")
                     Picker("Type", selection: $kvmType) {
-                        ForEach(Device.KVMType.allCases, id: \.self) { type in
+                        ForEach(Device.KVMType.userVisibleCases, id: \.self) { type in
                             HStack(spacing: 6) {
                                 KVMTypeIcon(type)
                                 Text(type.displayName)
@@ -78,10 +91,19 @@ public struct DeviceEditorView: View {
                     TextField("My KVM", text: $name)
                         .textFieldStyle(.roundedBorder)
                 }
-                GridRow {
-                    Text("Host")
-                    TextField(hostPlaceholder, text: $host)
-                        .textFieldStyle(.roundedBorder)
+
+                #if os(macOS)
+                if isUSBType {
+                    usbPickers
+                }
+                #endif
+
+                if showsHost {
+                    GridRow {
+                        Text("Host")
+                        TextField(hostPlaceholder, text: $host)
+                            .textFieldStyle(.roundedBorder)
+                    }
                 }
                 if showsScheme {
                     GridRow {
@@ -116,25 +138,27 @@ public struct DeviceEditorView: View {
                         Toggle("Allow self-signed TLS", isOn: $allowsInsecureTLS)
                     }
                 }
-                GridRow {
-                    Text("Password")
-                    HStack(spacing: 6) {
-                        Group {
-                            if showPassword {
-                                TextField("Password", text: $password)
-                            } else {
-                                SecureField("Password", text: $password)
+                if showsPassword {
+                    GridRow {
+                        Text("Password")
+                        HStack(spacing: 6) {
+                            Group {
+                                if showPassword {
+                                    TextField("Password", text: $password)
+                                } else {
+                                    SecureField("Password", text: $password)
+                                }
                             }
-                        }
-                        .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.roundedBorder)
 
-                        Button {
-                            showPassword.toggle()
-                        } label: {
-                            Image(systemName: showPassword ? "eye.slash" : "eye")
+                            Button {
+                                showPassword.toggle()
+                            } label: {
+                                Image(systemName: showPassword ? "eye.slash" : "eye")
+                            }
+                            .buttonStyle(.borderless)
+                            .help(showPassword ? "Hide password" : "Show password")
                         }
-                        .buttonStyle(.borderless)
-                        .help(showPassword ? "Hide password" : "Show password")
                     }
                 }
             }
@@ -151,7 +175,81 @@ public struct DeviceEditorView: View {
         }
         .padding(20)
         .frame(width: 460)
+        #if os(macOS)
+        .onAppear { refreshUSBDevices() }
+        #endif
     }
+
+    #if os(macOS)
+    @ViewBuilder
+    private var usbPickers: some View {
+        GridRow {
+            Text("Camera")
+            HStack(spacing: 6) {
+                Picker("Camera", selection: cameraSelectionBinding) {
+                    Text("Select…").tag(String?.none)
+                    ForEach(availableVideoDevices, id: \.uniqueID) { device in
+                        Text(device.localizedName).tag(Optional(device.uniqueID))
+                    }
+                    if let id = videoDeviceUniqueID,
+                       availableVideoDevices.first(where: { $0.uniqueID == id }) == nil {
+                        Text("\(id) (not connected)").tag(Optional(id))
+                    }
+                }
+                .labelsHidden()
+
+                refreshButton
+            }
+        }
+        GridRow {
+            Text("Serial")
+            HStack(spacing: 6) {
+                Picker("Serial", selection: serialSelectionBinding) {
+                    Text("Select…").tag(String?.none)
+                    ForEach(availableSerialPorts, id: \.path) { port in
+                        Text(port.displayName).tag(Optional(port.path))
+                    }
+                    if let path = serialDevicePath,
+                       availableSerialPorts.first(where: { $0.path == path }) == nil {
+                        Text("\(path) (not connected)").tag(Optional(path))
+                    }
+                }
+                .labelsHidden()
+
+                refreshButton
+            }
+        }
+    }
+
+    private var refreshButton: some View {
+        Button {
+            refreshUSBDevices()
+        } label: {
+            Image(systemName: "arrow.clockwise")
+        }
+        .buttonStyle(.borderless)
+        .help("Rescan USB devices")
+    }
+
+    private var cameraSelectionBinding: Binding<String?> {
+        Binding(
+            get: { videoDeviceUniqueID },
+            set: { videoDeviceUniqueID = $0 }
+        )
+    }
+
+    private var serialSelectionBinding: Binding<String?> {
+        Binding(
+            get: { serialDevicePath },
+            set: { serialDevicePath = $0 }
+        )
+    }
+
+    private func refreshUSBDevices() {
+        availableVideoDevices = USBKVMDeviceDiscovery.videoDevices()
+        availableSerialPorts = USBKVMDeviceDiscovery.serialPorts()
+    }
+    #endif
 
     private var title: String {
         switch mode {
@@ -168,10 +266,16 @@ public struct DeviceEditorView: View {
         kvmType == .appleScreenSharing || kvmType == .vnc
     }
 
-    private var showsScheme: Bool { !isRFBType }
-    private var showsPort: Bool { kvmType != .appleScreenSharing }
-    private var showsUsername: Bool { kvmType != .vnc }
+    private var isUSBType: Bool {
+        kvmType == .nanoKVMUSB
+    }
+
+    private var showsHost: Bool { !isUSBType }
+    private var showsScheme: Bool { !isRFBType && !isUSBType }
+    private var showsPort: Bool { kvmType != .appleScreenSharing && !isUSBType }
+    private var showsUsername: Bool { kvmType != .vnc && !isUSBType }
     private var showsTLS: Bool { kvmType == .comet }
+    private var showsPassword: Bool { !isUSBType }
 
     private var hostPlaceholder: String {
         switch kvmType {
@@ -194,38 +298,56 @@ public struct DeviceEditorView: View {
     }
 
     private var isValid: Bool {
+        if isUSBType {
+            return (videoDeviceUniqueID?.isEmpty == false)
+                && (serialDevicePath?.isEmpty == false)
+        }
         let hasRequiredUsername = !showsUsername || !trimmedUsername.isEmpty
         return !trimmedHost.isEmpty && hasRequiredUsername && (kvmType == .appleScreenSharing || resolvedPortValue != nil)
     }
 
     private func buildDevice() -> Device {
         let resolvedPort = kvmType == .appleScreenSharing ? 5900 : resolvedPortValue ?? defaultPort
-        let displayName = trimmedName.isEmpty ? trimmedHost : trimmedName
+        let displayName: String
+        if !trimmedName.isEmpty {
+            displayName = trimmedName
+        } else if isUSBType {
+            displayName = kvmType.displayName
+        } else {
+            displayName = trimmedHost
+        }
         let resolvedUsername = kvmType == .vnc ? "" : trimmedUsername
         let resolvedScheme = isRFBType ? .http : scheme
         let resolvedAllowsInsecureTLS = isRFBType ? false : allowsInsecureTLS
+        let resolvedHost = isUSBType ? "" : trimmedHost
+        let resolvedVideoID = isUSBType ? videoDeviceUniqueID : nil
+        let resolvedSerial = isUSBType ? serialDevicePath : nil
         switch mode {
         case .add:
             return Device(
                 name: displayName,
-                host: trimmedHost,
-                port: resolvedPort,
-                scheme: resolvedScheme,
-                username: resolvedUsername,
-                kvmType: kvmType,
-                allowsInsecureTLS: resolvedAllowsInsecureTLS
-            )
-        case .edit(let existing):
-            return Device(
-                id: existing.id,
-                name: displayName,
-                host: trimmedHost,
+                host: resolvedHost,
                 port: resolvedPort,
                 scheme: resolvedScheme,
                 username: resolvedUsername,
                 kvmType: kvmType,
                 allowsInsecureTLS: resolvedAllowsInsecureTLS,
-                lastConnectedAt: existing.lastConnectedAt
+                videoDeviceUniqueID: resolvedVideoID,
+                serialDevicePath: resolvedSerial
+            )
+        case .edit(let existing):
+            return Device(
+                id: existing.id,
+                name: displayName,
+                host: resolvedHost,
+                port: resolvedPort,
+                scheme: resolvedScheme,
+                username: resolvedUsername,
+                kvmType: kvmType,
+                allowsInsecureTLS: resolvedAllowsInsecureTLS,
+                lastConnectedAt: existing.lastConnectedAt,
+                videoDeviceUniqueID: resolvedVideoID,
+                serialDevicePath: resolvedSerial
             )
         }
     }
@@ -244,8 +366,13 @@ public struct DeviceEditorView: View {
 
     private func applyDefaults(for type: Device.KVMType) {
         switch type {
-        case .nanoKVMLite, .nanoKVMUSB:
-            if host == "kvm.local" || host.isEmpty {
+        case .nanoKVMUSB:
+            // Host/username/password rows are hidden for NanoKVM USB (see showsHost/
+            // showsUsername/showsPassword), so leave that state untouched — clearing it
+            // would discard the user's input if they switch types back and forth.
+            allowsInsecureTLS = false
+        case .nanoKVMLite:
+            if host.isEmpty || host == "kvm.local" {
                 host = "nanokvm.local"
             }
             if scheme == .https, port == "443" {

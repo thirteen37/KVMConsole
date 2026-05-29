@@ -13,12 +13,16 @@ public final class SavedDevicesStore: ObservableObject {
         storeURL: URL? = nil,
         passwordStore: PasswordStore = KeychainPasswordStore()
     ) {
-        self.storeURL = storeURL ?? Self.defaultStoreURL()
+        let resolvedStoreURL = storeURL ?? Self.defaultStoreURL()
+        self.storeURL = resolvedStoreURL
         self.passwordStore = passwordStore
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         self.encoder = encoder
         self.decoder = JSONDecoder()
+        if storeURL == nil {
+            Self.migrateFromSandboxContainerIfNeeded(to: resolvedStoreURL)
+        }
         load()
     }
 
@@ -87,6 +91,33 @@ public final class SavedDevicesStore: ObservableObject {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         guard let data = try? encoder.encode(devices) else { return }
         try? data.write(to: storeURL, options: .atomic)
+    }
+
+    /// The macOS app dropped the App Sandbox to gain raw serial access for NanoKVM USB.
+    /// `.applicationSupportDirectory` was previously redirected into the sandbox container,
+    /// so a one-time copy brings a prior sandboxed build's `devices.json` to the new
+    /// unsandboxed location. Best-effort and idempotent: it only runs when no store exists
+    /// yet at the destination and a legacy container file is present.
+    private static func migrateFromSandboxContainerIfNeeded(to destination: URL) {
+        #if os(macOS)
+        let fileManager = FileManager.default
+        guard !fileManager.fileExists(atPath: destination.path) else { return }
+
+        let bundleID = Bundle.main.bundleIdentifier ?? "io.lyx.KVMConsole"
+        let legacy = fileManager.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Containers", isDirectory: true)
+            .appendingPathComponent(bundleID, isDirectory: true)
+            .appendingPathComponent("Data/Library/Application Support", isDirectory: true)
+            .appendingPathComponent("io.lyx.KVMConsole", isDirectory: true)
+            .appendingPathComponent("devices.json", isDirectory: false)
+        guard fileManager.fileExists(atPath: legacy.path) else { return }
+
+        try? fileManager.createDirectory(
+            at: destination.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try? fileManager.copyItem(at: legacy, to: destination)
+        #endif
     }
 
     private static func defaultStoreURL() -> URL {

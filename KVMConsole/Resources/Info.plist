@@ -22,6 +22,8 @@
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>15.0</string>
+	<key>NSCameraUsageDescription</key>
+	<string>KVM Console captures live video from your USB KVM stick (NanoKVM USB).</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Yu-Xi Lim</string>
 	<key>NSLocalNetworkUsageDescription</key>

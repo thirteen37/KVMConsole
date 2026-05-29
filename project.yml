@@ -40,12 +40,17 @@ targets:
         LSMinimumSystemVersion: "15.0"
         NSHumanReadableCopyright: "© 2026 Yu-Xi Lim"
         NSLocalNetworkUsageDescription: "KVM Console connects to your KVM device over the local network."
+        NSCameraUsageDescription: "KVM Console captures live video from your USB KVM stick (NanoKVM USB)."
     entitlements:
       path: KVMConsole/Resources/KVMConsole.entitlements
       properties:
-        com.apple.security.app-sandbox: true
-        com.apple.security.network.client: true
-        com.apple.security.network.server: true
+        # The macOS app is NOT App-Sandboxed. The NanoKVM USB support needs
+        # raw tty ioctls (tcsetattr/tcgetattr) on /dev/cu.* to configure the CH9329
+        # serial bridge, which the App Sandbox blocks even with a file-access
+        # temporary exception. We rely on the hardened runtime + Developer ID
+        # notarization instead (the release pipeline does not require sandboxing).
+        # Camera remains as a hardened-runtime resource-access entitlement for UVC capture.
+        com.apple.security.device.camera: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.lyx.KVMConsole
