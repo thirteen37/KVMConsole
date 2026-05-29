@@ -132,23 +132,32 @@ public final class UVCCaptureSource: NSObject {
     }
 
     public func stop() {
-        if session.isRunning {
-            session.stopRunning()
-        }
         for observer in observers {
             NotificationCenter.default.removeObserver(observer)
         }
         observers.removeAll()
 
-        session.beginConfiguration()
-        if let input { session.removeInput(input) }
-        if let output { session.removeOutput(output) }
-        session.commitConfiguration()
-
+        // Hand the session off and clear our references synchronously so the source is
+        // immediately considered stopped, then run the blocking stopRunning()/reconfigure
+        // off the main actor (on sampleQueue) — stopRunning() can block for hundreds of ms
+        // with an external UVC stick, just like startRunning().
+        let session = self.session
+        let input = self.input
+        let output = self.output
         device = nil
-        input = nil
-        output = nil
+        self.input = nil
+        self.output = nil
         videoSize = nil
+
+        sampleQueue.async {
+            if session.isRunning {
+                session.stopRunning()
+            }
+            session.beginConfiguration()
+            if let input { session.removeInput(input) }
+            if let output { session.removeOutput(output) }
+            session.commitConfiguration()
+        }
     }
 
     private func installObservers() {

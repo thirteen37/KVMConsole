@@ -133,6 +133,14 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
         lastConnectedAt = try container.decodeIfPresent(Date.self, forKey: .lastConnectedAt)
         videoDeviceUniqueID = try container.decodeIfPresent(String.self, forKey: .videoDeviceUniqueID)
         serialDevicePath = try container.decodeIfPresent(String.self, forKey: .serialDevicePath)
+
+        // On origin/main `.nanoKVMUSB` was the IP-based NanoKVM type; this branch
+        // repurposed it for the local Sipeed USB capture stick. Remap legacy entries —
+        // identifiable by a host and no USB device fields — back to `.nanoKVMLite` so
+        // they keep routing to NanoKVMSession instead of failing as a USB device.
+        if kvmType == .nanoKVMUSB, videoDeviceUniqueID == nil, serialDevicePath == nil, !host.isEmpty {
+            kvmType = .nanoKVMLite
+        }
     }
 
     public var baseURL: URL? {
