@@ -72,7 +72,7 @@ public final class UVCCaptureSource: NSObject {
         self.renderCoordinator = renderCoordinator
     }
 
-    public func start(deviceUniqueID: String) throws {
+    public func start(deviceUniqueID: String) async throws {
         guard let device = AVCaptureDevice(uniqueID: deviceUniqueID) else {
             throw UVCCaptureError.deviceNotFound(uniqueID: deviceUniqueID)
         }
@@ -85,28 +85,50 @@ public final class UVCCaptureSource: NSObject {
         ]
         output.setSampleBufferDelegate(self, queue: sampleQueue)
 
-        session.beginConfiguration()
-        if session.canSetSessionPreset(.high) {
-            session.sessionPreset = .high
+        // Register for runtime errors before startRunning() so a failure during
+        // device spin-up isn't missed.
+        installObservers()
+
+        // AVCaptureSession configuration and startRunning() are blocking calls that can
+        // take hundreds of milliseconds with an external UVC stick. Run them off the main
+        // actor (on sampleQueue) so the UI isn't frozen while the device spins up.
+        let session = self.session
+        do {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                sampleQueue.async {
+                    session.beginConfiguration()
+                    if session.canSetSessionPreset(.high) {
+                        session.sessionPreset = .high
+                    }
+                    guard session.canAddInput(input) else {
+                        session.commitConfiguration()
+                        continuation.resume(throwing: UVCCaptureError.cannotAddInput)
+                        return
+                    }
+                    session.addInput(input)
+                    guard session.canAddOutput(output) else {
+                        session.commitConfiguration()
+                        continuation.resume(throwing: UVCCaptureError.cannotAddOutput)
+                        return
+                    }
+                    session.addOutput(output)
+                    session.commitConfiguration()
+                    session.startRunning()
+                    continuation.resume()
+                }
+            }
+        } catch {
+            // Nothing was successfully added to the session; just drop the observers.
+            for observer in observers {
+                NotificationCenter.default.removeObserver(observer)
+            }
+            observers.removeAll()
+            throw error
         }
-        guard session.canAddInput(input) else {
-            session.commitConfiguration()
-            throw UVCCaptureError.cannotAddInput
-        }
-        session.addInput(input)
-        guard session.canAddOutput(output) else {
-            session.commitConfiguration()
-            throw UVCCaptureError.cannotAddOutput
-        }
-        session.addOutput(output)
-        session.commitConfiguration()
 
         self.device = device
         self.input = input
         self.output = output
-
-        installObservers()
-        session.startRunning()
     }
 
     public func stop() {

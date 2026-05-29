@@ -104,19 +104,14 @@ public final class NanoKVMUSBSession: KVMSession {
                 return
             }
 
-            let started = await MainActor.run { () -> Bool in
+            let shouldProceed = await MainActor.run { () -> Bool in
                 guard let self, self.generation == myGeneration, self.state == .connecting else { return false }
-                do {
-                    try capture.start(deviceUniqueID: videoID)
-                    return true
-                } catch {
-                    self.finishWithError(error)
-                    return false
-                }
+                return true
             }
-            guard started else { return }
+            guard shouldProceed else { return }
 
             do {
+                try await capture.start(deviceUniqueID: videoID)
                 try await transport.open()
                 let weakSelfBox = WeakSession(value: self)
                 await transport.setOnDisconnect { error in

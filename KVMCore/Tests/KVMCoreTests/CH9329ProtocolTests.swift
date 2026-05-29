@@ -5,7 +5,8 @@ import XCTest
 final class CH9329ProtocolTests: XCTestCase {
     func test_keyboardPacket_pressA_matchesWikiFixture() {
         // The Sipeed NanoKVM-USB documentation / firmware specifies that
-        // sending the "A" key with no modifiers produces this 17-byte frame.
+        // sending the "A" key with no modifiers produces this 14-byte frame
+        // (2 header + address + command + length + 8 payload + checksum).
         let expected: [UInt8] = [
             0x57, 0xAB, 0x00, 0x02, 0x08,
             0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
