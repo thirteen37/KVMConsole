@@ -106,7 +106,9 @@ public actor CH9329SerialTransport {
         }
 
         cfmakeraw(&settings)
-        guard cfsetspeed(&settings, speed_t(B57600)) == 0 else {
+        // On Darwin the termios Bxxx speed constants are defined as their literal baud
+        // values, so the protocol's baudRate is the single source of truth for the port.
+        guard cfsetspeed(&settings, speed_t(CH9329Protocol.baudRate)) == 0 else {
             throw CH9329SerialError.configureFailed(errno: errno)
         }
 
