@@ -55,6 +55,26 @@ public struct Device: Identifiable, Hashable, Codable, Sendable {
             }
         }
 
+        /// Whether connecting requires a password. The NanoKVM USB capture stick
+        /// authenticates with nothing — it opens the UVC camera and CH9329 serial port
+        /// directly — so the viewer should connect without ever prompting. Every other
+        /// type authenticates over the network and needs a password.
+        public var requiresPasswordAuthentication: Bool {
+            self != .nanoKVMUSB
+        }
+
+        /// A small SF Symbol drawn as a corner badge to distinguish types that otherwise
+        /// share an icon. NanoKVM Lite (IP-based) and NanoKVM USB both use the `sipeed`
+        /// asset, so they are badged `network` vs `cable.connector` respectively. Types
+        /// with a distinct icon return `nil`.
+        public var iconBadgeSymbol: String? {
+            switch self {
+            case .nanoKVMLite: return "network"
+            case .nanoKVMUSB: return "cable.connector"
+            case .comet, .appleScreenSharing, .vnc: return nil
+            }
+        }
+
         /// Device types that should appear in the device-editor type picker on the
         /// current platform. `.nanoKVMUSB` is a USB-attached capture stick (UVC video +
         /// CH9329 serial), so it is hidden on iPadOS, where there is no public USB-serial

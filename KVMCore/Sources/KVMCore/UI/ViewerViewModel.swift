@@ -97,6 +97,11 @@ public final class ViewerViewModel: ObservableObject {
     public var supportsHostStatus: Bool { device.kvmType == .comet }
 
     public func reconnect() {
+        guard device.kvmType.requiresPasswordAuthentication else {
+            passwordPrompt = nil
+            connect(with: "")
+            return
+        }
         if let savedPassword = savedPassword(), !savedPassword.isEmpty {
             passwordPrompt = nil
             connect(with: savedPassword)
@@ -176,6 +181,10 @@ public final class ViewerViewModel: ObservableObject {
     }
 
     private func attemptAutoConnect() {
+        guard device.kvmType.requiresPasswordAuthentication else {
+            connect(with: "")
+            return
+        }
         if let savedPassword = savedPassword(), !savedPassword.isEmpty {
             connect(with: savedPassword)
         } else {
