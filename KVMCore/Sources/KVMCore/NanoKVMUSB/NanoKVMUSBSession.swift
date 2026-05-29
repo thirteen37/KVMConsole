@@ -121,12 +121,22 @@ public final class NanoKVMUSBSession: KVMSession {
                         session.finishWithError(error ?? CH9329SerialError.closed)
                     }
                 }
-                await MainActor.run {
-                    guard let self, self.generation == myGeneration else { return }
-                    guard self.state == .connecting else { return }
+                let handedOff = await MainActor.run { () -> Bool in
+                    guard let self, self.generation == myGeneration, self.state == .connecting else { return false }
                     self.state = .streaming
+                    return true
+                }
+                if !handedOff {
+                    // A disconnect/reconnect bumped the generation while startup was in
+                    // flight; self.captureSource/serialTransport now point at the new
+                    // attempt's objects, so tear down these orphans to free the camera
+                    // and the serial fd.
+                    await MainActor.run { capture.stop() }
+                    await transport.close()
                 }
             } catch {
+                await MainActor.run { capture.stop() }
+                await transport.close()
                 await MainActor.run {
                     guard let self, self.generation == myGeneration else { return }
                     self.finishWithError(error)
