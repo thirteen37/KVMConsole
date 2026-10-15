@@ -8,7 +8,6 @@ public enum GLKVMH264MediaError: Error, LocalizedError, Equatable {
     case frameTooShort
     case emptyPayload
     case streamEndedBeforeFirstFrame
-    case firstFrameTimedOut
 
     public var errorDescription: String? {
         switch self {
@@ -24,8 +23,6 @@ public enum GLKVMH264MediaError: Error, LocalizedError, Equatable {
             return "GLKVM direct H.264 frame has no video payload."
         case .streamEndedBeforeFirstFrame:
             return "GLKVM media stream closed before delivering a frame."
-        case .firstFrameTimedOut:
-            return "GLKVM media stream did not deliver a frame in time."
         }
     }
 }
@@ -77,11 +74,11 @@ public final class GLKVMH264MediaSocket: @unchecked Sendable {
         }
     }
 
-    /// - Parameter firstFrameTimeout: when non-nil, the stream fails with `.firstFrameTimedOut`
-    ///   if no decodable frame arrives within this interval. The socket's own 1s heartbeats keep a
-    ///   frameless connection open, so without this a stalled streamer (e.g. mid-restart) would
-    ///   never surface an error.
-    public func frames(firstFrameTimeout: Duration? = nil) throws -> AsyncThrowingStream<H264StreamFrame, Error> {
+    /// - Parameter firstFrameGrace: when non-nil and no decodable frame arrives within this
+    ///   interval, the stream yields a single `nil` and keeps running. The device keeps a frameless
+    ///   socket open (heartbeats only) while the host has no HDMI signal — e.g. it is off or
+    ///   hibernated — so the marker lets a caller proceed without video instead of hanging.
+    public func frames(firstFrameGrace: Duration? = nil) throws -> AsyncThrowingStream<H264StreamFrame?, Error> {
         guard let url = mediaURL else { throw GLKVMH264MediaError.invalidURL }
 
         var request = URLRequest(url: url)
@@ -96,12 +93,11 @@ public final class GLKVMH264MediaSocket: @unchecked Sendable {
             webSocketTask.resume()
             startHeartbeat(task: webSocketTask)
 
-            let timeoutTask: Task<Void, Never>? = firstFrameTimeout.map { timeout in
-                Task { [weak self] in
-                    try? await Task.sleep(for: timeout)
+            let graceTask: Task<Void, Never>? = firstFrameGrace.map { grace in
+                Task {
+                    try? await Task.sleep(for: grace)
                     guard !Task.isCancelled else { return }
-                    continuation.finish(throwing: GLKVMH264MediaError.firstFrameTimedOut)
-                    self?.cancel()
+                    continuation.yield(nil)
                 }
             }
 
@@ -129,7 +125,7 @@ public final class GLKVMH264MediaSocket: @unchecked Sendable {
                                 )
                                 if !firstFrameYielded {
                                     firstFrameYielded = true
-                                    timeoutTask?.cancel()
+                                    graceTask?.cancel()
                                 }
                                 frameSequencer.recordYield(continuation.yield(frameSequencer.nextFrame(from: stamped)))
                             }
@@ -148,7 +144,7 @@ public final class GLKVMH264MediaSocket: @unchecked Sendable {
             }
 
             continuation.onTermination = { @Sendable [weak self] _ in
-                timeoutTask?.cancel()
+                graceTask?.cancel()
                 receiveTask.cancel()
                 self?.cancel()
             }

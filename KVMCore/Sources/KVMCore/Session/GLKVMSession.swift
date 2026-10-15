@@ -38,10 +38,10 @@ public final class GLKVMSession: KVMSession {
     /// setup a bounded number of times before surfacing an error.
     private static let maxConnectAttempts = 3
     private static let connectRetryBackoff: Duration = .milliseconds(750)
-    /// Bounds each attempt's `.connecting` state: if the media stream accepts the socket but never
-    /// delivers a frame (a stalled streamer, kept alive by the socket's 1s heartbeats), the attempt
-    /// fails and retries rather than hanging.
-    private static let connectFirstFrameTimeout: Duration = .seconds(5)
+    /// Bounds each attempt's `.connecting` state: if the media socket stays up but delivers no
+    /// frame within this grace, the host has no HDMI signal (off or hibernated) and we hand off
+    /// without video rather than hanging or failing — the web UI's "No signal" behaviour.
+    private static let connectFirstFrameGrace: Duration = .seconds(5)
 
     public init(
         passwordStore: PasswordStore = KeychainPasswordStore(),
@@ -136,7 +136,7 @@ public final class GLKVMSession: KVMSession {
 
                         let mediaSocket = GLKVMH264MediaSocket(device: configuration.device, authToken: authToken)
                         var frameIterator = try mediaSocket
-                            .frames(firstFrameTimeout: Self.connectFirstFrameTimeout)
+                            .frames(firstFrameGrace: Self.connectFirstFrameGrace)
                             .makeAsyncIterator()
                         localMediaSocket = mediaSocket
 
@@ -144,7 +144,8 @@ public final class GLKVMSession: KVMSession {
                         // rationale. setStreamerVideoFormatH264() restarts the streamer, so the media
                         // stream fails on its first receive(), which surfaces only here; awaiting it
                         // inside the attempt is what lets the bounded retry absorb the restart race.
-                        // A stalled streamer trips the socket's first-frame timeout, which routes here.
+                        // `next()` returning nil means the stream ended; a yielded nil means the grace
+                        // elapsed with the socket still up (no HDMI signal) — hand off without video.
                         guard let firstFrame = try await frameIterator.next() else {
                             try Task.checkCancellation()
                             throw GLKVMH264MediaError.streamEndedBeforeFirstFrame
@@ -177,14 +178,14 @@ public final class GLKVMSession: KVMSession {
                             return
                         }
 
-                        KVMLog.glkvm.info("GLKVM direct H.264 pipeline started")
+                        KVMLog.glkvm.info("GLKVM direct H.264 pipeline started; firstFrame=\(firstFrame != nil, privacy: .public)")
 
                         // Streaming is live — the frame loop is now terminal (no retry mid-stream).
                         do {
-                            try decoder.decode(firstFrame)
+                            if let firstFrame { try decoder.decode(firstFrame) }
                             while let frame = try await frameIterator.next() {
                                 try Task.checkCancellation()
-                                try decoder.decode(frame)
+                                if let frame { try decoder.decode(frame) }
                             }
                             await MainActor.run {
                                 guard let self, self.generation == myGeneration else { return }
