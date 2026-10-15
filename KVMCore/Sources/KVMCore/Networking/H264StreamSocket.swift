@@ -70,8 +70,9 @@ struct H264StreamFrameSequencer {
         )
     }
 
-    mutating func recordYield(_ result: AsyncThrowingStream<H264StreamFrame, Error>.Continuation.YieldResult) {
-        guard case .dropped(let droppedFrame) = result else { return }
+    /// `Element` is `H264StreamFrame` or `H264StreamFrame?` (GLKVM's no-signal marker stream).
+    mutating func recordYield<Element>(_ result: AsyncThrowingStream<Element, Error>.Continuation.YieldResult) {
+        guard case .dropped(let dropped) = result, let droppedFrame = dropped as? H264StreamFrame else { return }
 
         droppedFrameCount &+= 1
         guard droppedFrameCount <= 5 || droppedFrameCount.isMultiple(of: 30) else { return }
